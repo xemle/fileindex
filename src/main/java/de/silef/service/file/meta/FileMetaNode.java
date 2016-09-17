@@ -12,12 +12,12 @@ import java.util.List;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileMeta implements Serializable {
+public class FileMetaNode implements Serializable {
 
     static int MAGIC_HEADER = 0x23100702;
 
-    private FileMeta parent;
-    private List<FileMeta> children = new LinkedList<>();
+    private FileMetaNode parent;
+    private List<FileMetaNode> children = new LinkedList<>();
 
     private Path name;
 
@@ -30,7 +30,7 @@ public class FileMeta implements Serializable {
 
     private long inode;
 
-    public FileMeta(FileMeta parent, FileMode mode, long size, long creationTime, long modifiedTime, long inode, Path name) {
+    public FileMetaNode(FileMetaNode parent, FileMode mode, long size, long creationTime, long modifiedTime, long inode, Path name) {
         setParent(parent);
         this.mode = mode;
         this.size = size;
@@ -40,11 +40,11 @@ public class FileMeta implements Serializable {
         this.name = name;
     }
 
-    private void addChild(FileMeta fileMeta) {
-        children.add(fileMeta);
+    private void addChild(FileMetaNode node) {
+        children.add(node);
     }
 
-    public FileMeta(FileMeta parent, Path file) throws IOException {
+    public FileMetaNode(FileMetaNode parent, Path file) throws IOException {
         if (file == null) {
             throw new NullPointerException("Path must not be null");
         }
@@ -127,7 +127,7 @@ public class FileMeta implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        FileMeta that = (FileMeta) o;
+        FileMetaNode that = (FileMetaNode) o;
 
         if (inode != that.inode) return false;
         if (modifiedTime != that.modifiedTime) return false;
@@ -150,7 +150,7 @@ public class FileMeta implements Serializable {
         return result;
     }
 
-    public List<FileMeta> getChildren() {
+    public List<FileMetaNode> getChildren() {
         return children;
     }
 
@@ -161,7 +161,7 @@ public class FileMeta implements Serializable {
         return Paths.get("");
     }
 
-    public void setParent(FileMeta parent) {
+    public void setParent(FileMetaNode parent) {
         this.parent = parent;
         if (parent != null) {
             parent.addChild(this);

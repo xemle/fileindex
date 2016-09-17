@@ -49,7 +49,7 @@ public class FileIndexReader {
 
             return new FileIndex(base, root);
         } catch (ClassCastException | IllegalArgumentException | IndexOutOfBoundsException e) {
-            throw new IOException("Could not read items", e);
+            throw new IOException("Could not read cache node", e);
         }
     }
 

@@ -37,7 +37,7 @@ public class FileIndexCli {
             changes = cache.getChanges(old);
         } else {
             System.out.println("Creating file cache");
-            FileMetaCache empty = new FileMetaCache(dir, new FileMeta(null, dir));
+            FileMetaCache empty = new FileMetaCache(dir, new FileMetaNode(null, dir));
             changes = cache.getChanges(empty);
         }
 

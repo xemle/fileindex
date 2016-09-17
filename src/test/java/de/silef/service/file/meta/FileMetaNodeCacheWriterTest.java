@@ -16,7 +16,7 @@ import static org.junit.Assert.*;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileMetaCacheWriterTest extends BasePathTest {
+public class FileMetaNodeCacheWriterTest extends BasePathTest {
 
     @Test
     public void write() throws IOException {

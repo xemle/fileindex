@@ -58,7 +58,7 @@ public class FileIndex {
     }
 
     private void updateAll(Collection<String> paths, boolean suppressErrors) throws IOException {
-        LOG.info("Updating hashes of {} files", paths.size());
+        LOG.info("Updating index with {} files", paths.size());
         int updatedFiles = 0;
         long updatedBytes = 0;
         for (String path : paths) {
@@ -75,15 +75,14 @@ public class FileIndex {
                 if (!suppressErrors) {
                     throw e;
                 } else {
-                    LOG.info("Could not update file {}", file);
+                    LOG.info("Could not index file {}", file);
                 }
             }
         }
         if (LOG.isInfoEnabled()) {
-            LOG.info("Updated {} files with {} bytes", updatedFiles, ByteUtil.toHumanSize(updatedBytes));
+            LOG.info("Updated index with {} files of {}", updatedFiles, ByteUtil.toHumanSize(updatedBytes));
         }
     }
-
 
     private void insertNode(String nodePath, byte[] hash) throws IOException {
         Path path = Paths.get(nodePath);

@@ -17,7 +17,7 @@ import static org.junit.Assert.*;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileMetaCacheTest extends BasePathTest {
+public class FileMetaNodeCacheTest extends BasePathTest {
 
     @Test
     public void getChangeShouldHaveNewFile() throws IOException {

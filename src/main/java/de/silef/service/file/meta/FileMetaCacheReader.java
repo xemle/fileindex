@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.zip.InflaterInputStream;
 
-import static de.silef.service.file.meta.FileMeta.MAGIC_HEADER;
+import static de.silef.service.file.meta.FileMetaNode.MAGIC_HEADER;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -25,7 +25,7 @@ public class FileMetaCacheReader {
             }
         } catch (IOException e) {
             if (suppressWarning) {
-                return new FileMetaCache(base, new FileMeta(null, base));
+                return new FileMetaCache(base, new FileMetaNode(null, base));
             } else {
                 throw e;
             }
@@ -37,20 +37,18 @@ public class FileMetaCacheReader {
              BufferedInputStream bufferedInput = new BufferedInputStream(inflaterInput);
              DataInputStream dataInput = new DataInputStream(bufferedInput)) {
 
-            Map<String, FileMeta> cache = new HashMap<>();
-
             int header = dataInput.readInt();
             if (header != MAGIC_HEADER) {
                 throw new IOException("Unexpected header: " + header);
             }
-            FileMeta root = readObject(null, dataInput);
+            FileMetaNode root = readNode(null, dataInput);
             return new FileMetaCache(base, root);
         } catch (ClassNotFoundException | ClassCastException e) {
-            throw new IOException("Could not read items", e);
+            throw new IOException("Could not read cache nodes", e);
         }
     }
 
-    private FileMeta readObject(FileMeta parent, DataInputStream input)
+    private FileMetaNode readNode(FileMetaNode parent, DataInputStream input)
             throws ClassNotFoundException, IOException {
 
         FileMode mode = FileMode.create(input.readInt());
@@ -61,13 +59,13 @@ public class FileMetaCacheReader {
 
         Path path = Paths.get(input.readUTF());
 
-        FileMeta fileMeta = new FileMeta(parent, mode, size, creationTime, modifiedTime, inode, path);
+        FileMetaNode node = new FileMetaNode(parent, mode, size, creationTime, modifiedTime, inode, path);
 
         int children = input.readInt();
         for (int i = 0; i < children; i++) {
-            readObject(fileMeta, input);
+            readNode(node, input);
         }
 
-        return fileMeta;
+        return node;
     }
 }

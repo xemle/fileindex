@@ -13,7 +13,7 @@ import static org.junit.Assert.*;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileMetaCacheReaderTest {
+public class FileMetaNodeCacheReaderTest {
 
     @Test
     public void read() throws IOException {

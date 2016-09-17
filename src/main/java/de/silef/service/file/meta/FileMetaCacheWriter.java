@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.zip.DeflaterOutputStream;
 
-import static de.silef.service.file.meta.FileMeta.MAGIC_HEADER;
+import static de.silef.service.file.meta.FileMetaNode.MAGIC_HEADER;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -23,27 +23,27 @@ public class FileMetaCacheWriter {
              BufferedOutputStream bufferedOutput = new BufferedOutputStream(deflaterOutput);
              DataOutputStream dataOutput = new DataOutputStream(bufferedOutput)) {
 
-            FileMeta root = cache.getRoot();
+            FileMetaNode root = cache.getRoot();
 
             dataOutput.writeInt(MAGIC_HEADER);
-            writeObject(root, dataOutput);
+            writeNode(root, dataOutput);
         }
     }
 
-    private void writeObject(FileMeta fileMeta, DataOutputStream output)
+    private void writeNode(FileMetaNode node, DataOutputStream output)
             throws IOException {
-        output.writeInt(fileMeta.getMode().getValue());
-        output.writeLong(fileMeta.getSize());
-        output.writeLong(fileMeta.getCreationTime());
-        output.writeLong(fileMeta.getModifiedTime());
-        output.writeLong(fileMeta.getInode());
+        output.writeInt(node.getMode().getValue());
+        output.writeLong(node.getSize());
+        output.writeLong(node.getCreationTime());
+        output.writeLong(node.getModifiedTime());
+        output.writeLong(node.getInode());
 
-        output.writeUTF(fileMeta.getName().toString());
+        output.writeUTF(node.getName().toString());
 
-        Collection<FileMeta> children = fileMeta.getChildren();
+        Collection<FileMetaNode> children = node.getChildren();
         output.writeInt(children.size());
-        for (FileMeta child : children) {
-            writeObject(child, output);
+        for (FileMetaNode child : children) {
+            writeNode(child, output);
         }
     }
 

@@ -18,18 +18,18 @@ public class FileMetaCache {
 
     private Path base;
 
-    private FileMeta root;
+    private FileMetaNode root;
 
     public FileMetaCache(Path base) throws IOException {
         this(base, build(base));
     }
 
-    public FileMetaCache(Path base, FileMeta root) {
+    public FileMetaCache(Path base, FileMetaNode root) {
         this.base = base;
         this.root = root;
     }
 
-    private static FileMeta build(Path base) throws IOException {
+    private static FileMetaNode build(Path base) throws IOException {
         CachePathVisitor cacheVisitor = new CachePathVisitor();
         PathVisitor realPathVisitor = new RealPathVisitorFilter(base, cacheVisitor);
         PathVisitor suppressErrorVisitor = new SuppressErrorPathVisitor(realPathVisitor);
@@ -39,7 +39,7 @@ public class FileMetaCache {
         return cacheVisitor.getRoot();
     }
 
-    public Collection<FileMeta> getFileMetaItems() {
+    public Collection<FileMetaNode> getFileMetaNodes() {
         return flattenMeta().values();
     }
 
@@ -52,8 +52,8 @@ public class FileMetaCache {
     }
 
     public FileMetaChanges getChanges(FileMetaCache other) {
-        Map<String, FileMeta> meta = flattenMeta();
-        Map<String, FileMeta> otherMeta = other.flattenMeta();
+        Map<String, FileMetaNode> meta = flattenMeta();
+        Map<String, FileMetaNode> otherMeta = other.flattenMeta();
 
         Set<String> created = new HashSet<>(meta.keySet());
         created.removeAll(otherMeta.keySet());
@@ -82,30 +82,30 @@ public class FileMetaCache {
         return new FileMetaChanges(base, created, modified, removed);
     }
 
-    private long sumFileSize(Set<String> created, Map<String, FileMeta> meta) {
+    private long sumFileSize(Set<String> created, Map<String, FileMetaNode> meta) {
         return created.stream()
                 .map(meta::get)
                 .filter(f -> f != null)
-                .map(FileMeta::getSize)
+                .map(FileMetaNode::getSize)
                 .reduce(0L, (a, b) -> a + b);
     }
 
-    private Map<String, FileMeta> flattenMeta() {
-        Map<String, FileMeta> result = new HashMap<>();
+    private Map<String, FileMetaNode> flattenMeta() {
+        Map<String, FileMetaNode> result = new HashMap<>();
         collectMeta(root, result);
         return result;
     }
 
-    private void collectMeta(FileMeta meta, Map<String, FileMeta> result) {
+    private void collectMeta(FileMetaNode meta, Map<String, FileMetaNode> result) {
         if (meta.getMode() != FileMode.DIRECTORY) {
             result.put(meta.getRelativePath().toString(), meta);
         }
-        for (FileMeta child : meta.getChildren()) {
+        for (FileMetaNode child : meta.getChildren()) {
             collectMeta(child, result);
         }
     }
 
-    public FileMeta getRoot() {
+    public FileMetaNode getRoot() {
         return root;
     }
 }
