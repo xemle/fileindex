@@ -44,6 +44,8 @@ public class FileIndexCli {
             FileMetaCache empty = new FileMetaCache(dir, new HashMap<>());
             changes = cache.getChanges(empty);
         }
+        new FileMetaCacheWriter().write(cache, cacheFile);
+        System.out.println("File cache is updated");
 
         FileIndex index = null;
         if (Files.exists(indexFile)) {
@@ -62,8 +64,8 @@ public class FileIndexCli {
         System.out.println("Updating file index");
         index.updateChanges(changes, false);
         if (changes.hasChanges()) {
-            new FileMetaCacheWriter().write(cache, cacheFile);
             new FileIndexWriter().write(index, indexFile);
         }
+        System.out.println("File index is updated");
     }
 }

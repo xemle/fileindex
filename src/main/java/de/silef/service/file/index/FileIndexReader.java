@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.zip.InflaterInputStream;
 
 import static de.silef.service.file.index.FileIndex.MAGIC_HEADER;
+import static de.silef.service.file.util.HashUtil.HASH_LEN;
 
 
 /**
@@ -44,54 +45,82 @@ public class FileIndexReader {
                 throw new IOException("Unexpected header: " + header);
             }
 
-            IndexNode root = null;
-            Map<byte[], String> hashToName = new HashMap<>();
-            byte[] buf = new byte[1024];
+            IndexNode root = readIndexNode(dataInput);
 
-            while (dataInput.available() > 0) {
-                int size = dataInput.readInt();
-                while (buf.length < size) {
-                    buf = new byte[buf.length * 2];
-                }
-                int read = dataInput.read(buf, 0, size);
-                if (read != size) {
-                    throw new IOException("Failed to read " + size + " bytes. Got " + read + " bytes");
-                }
-
-                byte[] hash = HashUtil.getHash(buf, 0, size);
-                if (root == null) {
-                    hashToName.put(hash, "");
-                }
-                IndexNode indexNode = readNode(buf, size, hash, hashToName);
-                if (root == null) {
-                    root = indexNode;
-                }
-            }
             return new FileIndex(base, root);
         } catch (ClassCastException | IllegalArgumentException e) {
             throw new IOException("Could not read items", e);
         }
     }
 
-    private IndexNode readNode(byte[] buf, int len, byte[] nodeHash, Map<byte[], String> hashToName) {
-        int pos = 0;
-        List<IndexNode> children = new LinkedList<>();
-        while (pos < len) {
-            FileMode fileMode = FileMode.create(buf[pos]);
-            byte hashLength = buf[pos + 1];
-            byte[] hash = Arrays.copyOfRange(buf, pos + 2, pos + 2 + hashLength);
-            pos += 2 + hashLength;
-            int nameEnd = pos;
-            while (nameEnd < len && buf[nameEnd] != 0) {
-                nameEnd++;
+    private IndexNode readIndexNode(DataInputStream dataInput) throws IOException {
+        Map<String, String> hashToName = new HashMap<>();
+        byte[] buf = new byte[1024];
+        IndexNode root = null;
+
+        while (dataInput.read(buf, 0, 2) == 2) {
+            int size = readShort(buf);
+            buf = resizeBuffer(buf, size);
+            int read = dataInput.read(buf, 0, size);
+            if (read != size) {
+                throw new IOException("Failed to read " + size + " bytes. Got " + read + " bytes");
             }
-            String name = new String(buf, pos, nameEnd - pos, StandardCharsets.UTF_8);
-            hashToName.put(hash, name);
-            children.add(new IndexNode(fileMode, name, hash));
-            pos = nameEnd + 1;
+
+            byte[] nodeHash = HashUtil.getHash(buf, 0, size);
+            IndexNode indexNode = readChildren(buf, size, nodeHash, hashToName);
+            if (root == null) {
+                root = indexNode;
+            }
         }
-        return new IndexNode(hashToName.get(nodeHash), children, nodeHash);
+        return root;
     }
 
+    private IndexNode readChildren(byte[] buf, int bufLen, byte[] nodeHash, Map<String, String> hashToName) {
+        String nodeName = getNodeName(nodeHash, hashToName);
+        List<IndexNode> children = new LinkedList<>();
+
+        int pos = 0;
+        while (pos < bufLen) {
+            byte[] hash = Arrays.copyOfRange(buf, pos, pos + HASH_LEN);
+            pos += HASH_LEN;
+            FileMode fileMode = FileMode.create(buf[pos]);
+            pos += 1;
+            int length = readShort(buf, pos);
+            pos += 2;
+            String name = new String(buf, pos, length, StandardCharsets.UTF_8);
+            pos += length;
+
+            children.add(new IndexNode(fileMode, name, hash));
+            hashToName.put(HashUtil.toHex(hash), name);
+        }
+
+        return new IndexNode(nodeName, children, nodeHash);
+    }
+
+    private int readShort(byte[] buf) {
+        return readShort(buf, 0);
+    }
+
+    private int readShort(byte[] buf, int offset) {
+        return (buf[offset] << 8) + (buf[offset + 1]);
+    }
+
+    private byte[] resizeBuffer(byte[] buf, int size) {
+        byte[] result = buf;
+        while (result.length < size) {
+            result = new byte[result.length * 2];
+        }
+        return result;
+    }
+
+    private String getNodeName(byte[] nodeHash, Map<String, String> hashToName) {
+        String result;
+        if (hashToName.isEmpty()) {
+            result = "";
+        } else {
+            result = hashToName.get(HashUtil.toHex(nodeHash));
+        }
+        return result;
+    }
 
 }

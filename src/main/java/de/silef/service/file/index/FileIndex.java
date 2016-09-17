@@ -6,6 +6,7 @@ import de.silef.service.file.util.HashUtil;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -21,7 +22,7 @@ public class FileIndex {
 
     private Path base;
 
-    public FileIndex(Path base) throws IOException {
+    public FileIndex(Path base) {
         this(base, new IndexNode("", new LinkedList<>()));
     }
 
@@ -39,7 +40,7 @@ public class FileIndex {
     }
 
     public void updateChanges(FileMetaChanges changes, boolean suppressErrors) throws IOException {
-        if (changes.hasChanges()) {
+        if (!changes.hasChanges()) {
             return;
         }
         updateAll(changes.getCreated(), suppressErrors);
@@ -54,7 +55,7 @@ public class FileIndex {
     private void updateAll(Collection<String> paths, boolean suppressErrors) throws IOException {
         for (String path : paths) {
             Path file = base.resolve(path);
-            if (!Files.isRegularFile(file)) {
+            if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
                 continue;
             }
             try {

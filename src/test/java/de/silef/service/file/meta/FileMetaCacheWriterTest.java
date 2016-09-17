@@ -1,5 +1,6 @@
 package de.silef.service.file.meta;
 
+import de.silef.service.file.test.BasePathTest;
 import de.silef.service.file.test.PathUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -15,19 +16,7 @@ import static org.junit.Assert.*;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileMetaCacheWriterTest {
-
-    private Path tmp;
-
-    @Before
-    public void setUp() throws IOException {
-        tmp = Files.createTempDirectory("file-meta-cache-writer-");
-    }
-
-    @After
-    public void tearDown() throws IOException {
-        PathUtils.delete(tmp);
-    }
+public class FileMetaCacheWriterTest extends BasePathTest {
 
     @Test
     public void write() throws IOException {

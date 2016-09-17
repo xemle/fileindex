@@ -10,6 +10,8 @@ import java.security.NoSuchAlgorithmException;
  */
 public class HashUtil {
 
+    public static int HASH_LEN = 20;
+
     public static byte[] getHash(Path path) throws IOException {
         try (InputStream input = new FileInputStream(path.toFile());
              BufferedInputStream bufferedInput = new BufferedInputStream(input)) {

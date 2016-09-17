@@ -1,11 +1,9 @@
 package de.silef.service.file.index;
 
-import de.silef.service.file.meta.FileMeta;
 import de.silef.service.file.meta.FileMode;
 
 import java.io.*;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.zip.DeflaterOutputStream;
 
 import static de.silef.service.file.index.FileIndex.MAGIC_HEADER;
@@ -27,11 +25,24 @@ public class FileIndexWriter {
              BufferedOutputStream bufferedOutput = new BufferedOutputStream(deflaterOutput);
              DataOutputStream dataOutput = new DataOutputStream(bufferedOutput)) {
 
-            IndexNode root = index.getRoot();
-
             dataOutput.writeInt(MAGIC_HEADER);
-            writeChildren(root, dataOutput);
+
+            writeNode(index.getRoot(), dataOutput);
         }
+    }
+
+    private void writeNode(IndexNode node, DataOutputStream output) throws IOException {
+        try (ByteArrayOutputStream buf = new ByteArrayOutputStream();
+             DataOutputStream dataOutput = new DataOutputStream(buf)) {
+
+            node.writeChildren(dataOutput);
+            byte[] bytes = buf.toByteArray();
+
+            output.writeShort(bytes.length);
+            output.write(bytes);
+        }
+
+        writeChildren(node, output);
     }
 
     private void writeChildren(IndexNode node, DataOutputStream output) throws IOException {
@@ -40,13 +51,7 @@ public class FileIndexWriter {
                 continue;
             }
 
-            ByteArrayOutputStream buf = new ByteArrayOutputStream();
-            child.write(buf);
-            byte[] bytes = buf.toByteArray();
-            output.writeInt(bytes.length);
-            output.write(bytes);
-
-            writeChildren(child, output);
+            writeNode(child, output);
         }
     }
 
