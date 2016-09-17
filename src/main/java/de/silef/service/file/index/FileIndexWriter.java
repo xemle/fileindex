@@ -1,6 +1,7 @@
 package de.silef.service.file.index;
 
 import de.silef.service.file.meta.FileMeta;
+import de.silef.service.file.meta.FileMode;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -26,16 +27,26 @@ public class FileIndexWriter {
              BufferedOutputStream bufferedOutput = new BufferedOutputStream(deflaterOutput);
              DataOutputStream dataOutput = new DataOutputStream(bufferedOutput)) {
 
-            Map<String, byte[]> items = index.getPathToHash();
+            IndexNode root = index.getRoot();
 
             dataOutput.writeInt(MAGIC_HEADER);
-            dataOutput.writeInt(items.size());
-            for (Map.Entry<String, byte[]> item : items.entrySet()) {
-                byte[] hash = item.getValue();
-                dataOutput.writeByte((byte) (0xff & hash.length));
-                dataOutput.write(hash);
-                dataOutput.writeUTF(item.getKey());
+            writeChildren(root, dataOutput);
+        }
+    }
+
+    private void writeChildren(IndexNode node, DataOutputStream output) throws IOException {
+        for (IndexNode child : node.getChildren()) {
+            if (child.getFileMode() != FileMode.DIRECTORY) {
+                continue;
             }
+
+            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            child.write(buf);
+            byte[] bytes = buf.toByteArray();
+            output.writeInt(bytes.length);
+            output.write(bytes);
+
+            writeChildren(child, output);
         }
     }
 

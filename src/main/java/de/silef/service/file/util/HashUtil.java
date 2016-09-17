@@ -16,8 +16,13 @@ public class HashUtil {
             return getHash(bufferedInput);
         }
     }
+
     public static byte[] getHash(byte[] bytes) throws IOException {
-        try (InputStream input = new ByteArrayInputStream(bytes)) {
+        return getHash(bytes, 0, bytes.length);
+    }
+
+    public static byte[] getHash(byte[] bytes, int offset, int len) throws IOException {
+        try (InputStream input = new ByteArrayInputStream(bytes, offset, len)) {
             return getHash(input);
         }
     }
@@ -40,10 +45,10 @@ public class HashUtil {
         return digest.digest();
     }
 
-    public String toHex(byte[] hash) {
+    public static String toHex(byte[] hash) {
         StringBuilder sb = new StringBuilder();
         for (byte b : hash) {
-            sb.append(String.format("%02X ", b));
+            sb.append(String.format("%02x", b));
         }
         return sb.toString();
     }

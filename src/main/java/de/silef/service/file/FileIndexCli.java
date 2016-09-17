@@ -37,7 +37,7 @@ public class FileIndexCli {
         FileMetaChanges changes;
         if (Files.exists(cacheFile)) {
             System.out.println("Reading file cache");
-            FileMetaCache old = new FileMetaCacheReader().read(dir, cacheFile, true);
+            FileMetaCache old = new FileMetaCacheReader().read(dir, cacheFile);
             changes = cache.getChanges(old);
         } else {
             System.out.println("Creating file cache");
@@ -45,11 +45,16 @@ public class FileIndexCli {
             changes = cache.getChanges(empty);
         }
 
-        FileIndex index;
+        FileIndex index = null;
         if (Files.exists(indexFile)) {
             System.out.println("Reading file index");
-            index = new FileIndexReader().read(dir, indexFile);
-        } else {
+            try {
+                index = new FileIndexReader().read(dir, indexFile);
+            } catch (IOException e) {
+                index = null;
+            }
+        }
+        if (index == null) {
             System.out.println("Creating file index");
             index = new FileIndex(dir);
             index.init(cache.getPaths());

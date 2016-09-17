@@ -1,14 +1,14 @@
 package de.silef.service.file.index;
 
 import de.silef.service.file.meta.FileMetaChanges;
+import de.silef.service.file.meta.FileMode;
 import de.silef.service.file.util.HashUtil;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.file.Paths;
+import java.util.*;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -17,17 +17,17 @@ public class FileIndex {
 
     public static int MAGIC_HEADER = 0x08020305;
 
-    private Map<String, byte[]> pathToHash;
+    private IndexNode root;
 
     private Path base;
 
-    public FileIndex(Path base) {
-        this(base, new HashMap<>());
+    public FileIndex(Path base) throws IOException {
+        this(base, new IndexNode("", new LinkedList<>()));
     }
 
-    public FileIndex(Path base, Map<String, byte[]> pathToHash) {
+    public FileIndex(Path base, IndexNode root) {
         this.base = base;
-        this.pathToHash = pathToHash;
+        this.root = root;
     }
 
     public void init(Collection<String> paths) throws IOException {
@@ -59,7 +59,7 @@ public class FileIndex {
             }
             try {
                 byte[] hash = HashUtil.getHash(file);
-                pathToHash.put(path, hash);
+                insertNode(path, hash);
             } catch (IOException e) {
                 if (!suppressErrors) {
                     throw e;
@@ -68,13 +68,76 @@ public class FileIndex {
         }
     }
 
-    private void removeAll(Collection<String> paths) {
+
+    private void insertNode(String nodePath, byte[] hash) throws IOException {
+        Path path = Paths.get(nodePath);
+        List<String> names = new LinkedList<>();
+        for (int i = 0; i < path.getNameCount(); i++) {
+            names.add(path.getName(i).toString());
+        }
+        root = insertNode(root, "", names, hash);
+    }
+
+    private IndexNode insertNode(IndexNode node, String nodeName, List<String> names, byte[] hash) throws IOException {
+        if (node.getFileMode() != FileMode.DIRECTORY) {
+            throw new IllegalArgumentException("node must be an directory");
+        }
+        if (names.isEmpty()) {
+            throw new IllegalArgumentException("Path names must not be empty");
+        }
+
+        String name = names.remove(0);
+        IndexNode child = node.findChildren(name);
+        List<IndexNode> children = node.getChildren();
+        children.remove(child);
+
+
+        if (names.isEmpty()) {
+            children.add(new IndexNode(name, hash));
+        } else {
+            if (child == null) {
+                child = new IndexNode(name, new LinkedList<>());
+            }
+            children.add(insertNode(child, name, names, hash));
+        }
+
+        children.sort((a, b) -> a.getName().compareTo(b.getName()));
+        return new IndexNode(nodeName, children);
+    }
+
+    private void removeNode(String nodePath) throws IOException {
+        Path path = Paths.get(nodePath);
+        List<String> names = new LinkedList<>();
+        for (int i = 0; i < path.getNameCount(); i++) {
+            names.add(path.getName(i).toString());
+        }
+        root = removeNode(root, "", names);
+    }
+
+    private IndexNode removeNode(IndexNode node, String nodeName, List<String> names) throws IOException {
+        if (node.getFileMode() != FileMode.DIRECTORY) {
+            throw new IllegalArgumentException("node must be an directory");
+        }
+        String name = names.remove(0);
+        IndexNode child = node.findChildren(name);
+        List<IndexNode> children = node.getChildren();
+        children.remove(child);
+
+        if (!names.isEmpty() && child != null) {
+            children.add(removeNode(child, name, names));
+        }
+
+        children.sort((a, b) -> a.getName().compareTo(b.getName()));
+        return new IndexNode(nodeName, children);
+    }
+
+    private void removeAll(Collection<String> paths) throws IOException {
         for (String path : paths) {
-            pathToHash.remove(path);
+            removeNode(path);
         }
     }
 
-    Map<String, byte[]> getPathToHash() {
-        return pathToHash;
+    IndexNode getRoot() {
+        return root;
     }
 }

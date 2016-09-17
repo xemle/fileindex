@@ -6,22 +6,22 @@ package de.silef.service.file.meta;
  * Created by sebastian on 17.09.16.
  */
 public enum FileMode {
-    FILE      (0100000),
-    LINK      (0120000),
-    DIRECTORY (0040000),
-    OTHER     (0000000);
+    DIRECTORY ((byte) 1),
+    FILE      ((byte) 2),
+    LINK      ((byte) 4),
+    OTHER     ((byte) 0);
 
-    int value;
+    byte value;
 
-    FileMode(int value) {
+    FileMode(byte value) {
         this.value = value;
     }
 
-    public int getValue() {
+    public byte getValue() {
         return value;
     }
 
-    static FileMode create(int value) {
+    public static FileMode create(int value) {
         if (value == FILE.value) {
             return FILE;
         } else if (value == DIRECTORY.value) {

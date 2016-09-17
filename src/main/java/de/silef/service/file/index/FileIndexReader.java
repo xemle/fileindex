@@ -1,13 +1,12 @@
 package de.silef.service.file.index;
 
-import de.silef.service.file.meta.FileMeta;
-import de.silef.service.file.meta.FileMetaCache;
 import de.silef.service.file.meta.FileMode;
+import de.silef.service.file.util.HashUtil;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.zip.InflaterInputStream;
 
 import static de.silef.service.file.index.FileIndex.MAGIC_HEADER;
@@ -28,7 +27,7 @@ public class FileIndexReader {
             }
         } catch (IOException e) {
             if (suppressWarning) {
-                return new FileIndex(base, new HashMap<>());
+                return new FileIndex(base);
             } else {
                 throw e;
             }
@@ -40,31 +39,59 @@ public class FileIndexReader {
              BufferedInputStream bufferedInput = new BufferedInputStream(inflaterInput);
              DataInputStream dataInput = new DataInputStream(bufferedInput)) {
 
-            Map<String, byte[]> pathToHash = new HashMap<>();
-
             int header = dataInput.readInt();
             if (header != MAGIC_HEADER) {
                 throw new IOException("Unexpected header: " + header);
             }
-            int size = dataInput.readInt();
-            for (int i = 0; i < size; i++) {
-                readPathHash(dataInput, pathToHash);
+
+            IndexNode root = null;
+            Map<byte[], String> hashToName = new HashMap<>();
+            byte[] buf = new byte[1024];
+
+            while (dataInput.available() > 0) {
+                int size = dataInput.readInt();
+                while (buf.length < size) {
+                    buf = new byte[buf.length * 2];
+                }
+                int read = dataInput.read(buf, 0, size);
+                if (read != size) {
+                    throw new IOException("Failed to read " + size + " bytes. Got " + read + " bytes");
+                }
+
+                byte[] hash = HashUtil.getHash(buf, 0, size);
+                if (root == null) {
+                    hashToName.put(hash, "");
+                }
+                IndexNode indexNode = readNode(buf, size, hash, hashToName);
+                if (root == null) {
+                    root = indexNode;
+                }
             }
-            return new FileIndex(base, pathToHash);
-        } catch (ClassCastException e) {
+            return new FileIndex(base, root);
+        } catch (ClassCastException | IllegalArgumentException e) {
             throw new IOException("Could not read items", e);
         }
     }
 
-    private void readPathHash(DataInputStream objectInput, Map<String, byte[]> pathToHash) throws IOException {
-        int length = objectInput.readByte();
-        byte[] hash = new byte[length];
-        int read = objectInput.read(hash);
-        if (read != length) {
-            throw new IOException("Could not read hash. Expected " + length + " bytes but got " + read);
+    private IndexNode readNode(byte[] buf, int len, byte[] nodeHash, Map<byte[], String> hashToName) {
+        int pos = 0;
+        List<IndexNode> children = new LinkedList<>();
+        while (pos < len) {
+            FileMode fileMode = FileMode.create(buf[pos]);
+            byte hashLength = buf[pos + 1];
+            byte[] hash = Arrays.copyOfRange(buf, pos + 2, pos + 2 + hashLength);
+            pos += 2 + hashLength;
+            int nameEnd = pos;
+            while (nameEnd < len && buf[nameEnd] != 0) {
+                nameEnd++;
+            }
+            String name = new String(buf, pos, nameEnd - pos, StandardCharsets.UTF_8);
+            hashToName.put(hash, name);
+            children.add(new IndexNode(fileMode, name, hash));
+            pos = nameEnd + 1;
         }
-        String path = objectInput.readUTF();
-        pathToHash.put(path, hash);
+        return new IndexNode(hashToName.get(nodeHash), children, nodeHash);
     }
+
 
 }
