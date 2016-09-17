@@ -48,7 +48,7 @@ public class FileIndexReader {
             IndexNode root = readIndexNode(dataInput);
 
             return new FileIndex(base, root);
-        } catch (ClassCastException | IllegalArgumentException e) {
+        } catch (ClassCastException | IllegalArgumentException | IndexOutOfBoundsException e) {
             throw new IOException("Could not read items", e);
         }
     }

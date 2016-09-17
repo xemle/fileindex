@@ -15,7 +15,9 @@ The order is depth-first. The index node entries are sorted by their names. Lowe
 name first. Only directories are listed in the file index.
 
 The first index node is the root node. The root index node has the an empty string 
-as name. 
+as name.
+
+The file index is with zlib algorithm compressed.
 
 
     +----------------+

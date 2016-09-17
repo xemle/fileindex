@@ -39,7 +39,7 @@ public class HashUtil {
     }
 
     private static byte[] createHash(InputStream inputStream, MessageDigest digest) throws IOException {
-        byte[] buf = new byte[1 << 12];
+        byte[] buf = new byte[1 << 14];
         int read;
         while ((read = inputStream.read(buf)) > 0) {
             digest.update(buf, 0, read);

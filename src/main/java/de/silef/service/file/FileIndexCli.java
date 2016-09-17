@@ -44,14 +44,12 @@ public class FileIndexCli {
             FileMetaCache empty = new FileMetaCache(dir, new HashMap<>());
             changes = cache.getChanges(empty);
         }
-        new FileMetaCacheWriter().write(cache, cacheFile);
-        System.out.println("File cache is updated");
 
         FileIndex index = null;
         if (Files.exists(indexFile)) {
             System.out.println("Reading file index");
             try {
-                index = new FileIndexReader().read(dir, indexFile);
+                index = new FileIndexReader().read(dir, indexFile, true);
             } catch (IOException e) {
                 index = null;
             }
@@ -59,13 +57,14 @@ public class FileIndexCli {
         if (index == null) {
             System.out.println("Creating file index");
             index = new FileIndex(dir);
-            index.init(cache.getPaths());
         }
         System.out.println("Updating file index");
         index.updateChanges(changes, false);
         if (changes.hasChanges()) {
             new FileIndexWriter().write(index, indexFile);
+            System.out.println("File index is updated");
+            new FileMetaCacheWriter().write(cache, cacheFile);
+            System.out.println("File cache is updated");
         }
-        System.out.println("File index is updated");
     }
 }
