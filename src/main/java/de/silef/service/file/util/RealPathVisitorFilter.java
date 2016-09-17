@@ -33,6 +33,11 @@ public class RealPathVisitorFilter extends PathVisitor {
         return VisitorResult.SKIP;
     }
 
+    @Override
+    public VisitorResult postVisitDirectory(Path file) throws IOException {
+        return delgate.postVisitDirectory(file);
+    }
+
     private boolean doDelgate(Path path) throws IOException {
         Path realPath = path.toRealPath();
         return realPath.startsWith(base);

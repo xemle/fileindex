@@ -31,4 +31,13 @@ public class SuppressErrorPathVisitor extends PathVisitor {
             return VisitorResult.SKIP;
         }
     }
+
+    @Override
+    public VisitorResult postVisitDirectory(Path file) throws IOException {
+        try {
+            return delegate.postVisitDirectory(file);
+        } catch (IOException e) {
+            return VisitorResult.SKIP;
+        }
+    }
 }

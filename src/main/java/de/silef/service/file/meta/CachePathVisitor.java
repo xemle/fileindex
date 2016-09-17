@@ -5,24 +5,24 @@ import de.silef.service.file.util.PathVisitor;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by sebastian on 17.09.16.
  */
 public class CachePathVisitor extends PathVisitor {
 
-    private Path base;
+    private List<FileMeta> parentStack;
 
-    private Map<String, FileMeta> cache = new HashMap<>();
+    private FileMeta root;
 
-    public CachePathVisitor(Path base) {
-        this.base = base;
+    public CachePathVisitor() throws IOException {
+        parentStack = new ArrayList<>();
     }
 
-    public Map<String, FileMeta> getCache() {
-        return cache;
+    public FileMeta getRoot() {
+        return root;
     }
 
     @Override
@@ -30,6 +30,8 @@ public class CachePathVisitor extends PathVisitor {
         if (!Files.isReadable(path)) {
             return VisitorResult.SKIP;
         }
+        FileMeta parent = parentStack.isEmpty() ? null : parentStack.get(parentStack.size() - 1);
+        parentStack.add(new FileMeta(parent, path));
         return super.preVisitDirectory(path);
     }
 
@@ -41,9 +43,16 @@ public class CachePathVisitor extends PathVisitor {
         return super.visitFile(path);
     }
 
+    @Override
+    public VisitorResult postVisitDirectory(Path dir) throws IOException {
+        root = parentStack.remove(parentStack.size() - 1);
+        return super.postVisitDirectory(dir);
+    }
+
+
     private void addCacheItem(Path path) throws IOException {
-        String relative = base.relativize(path).toString();
-        cache.put(relative, new FileMeta(path, relative));
+        FileMeta parent = parentStack.get(parentStack.size() - 1);
+        new FileMeta(parent, path);
     }
 
 }

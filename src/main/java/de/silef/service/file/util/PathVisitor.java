@@ -9,6 +9,13 @@ import java.nio.file.Path;
 public class PathVisitor {
     public enum VisitorResult { CONTINUE, SKIP };
 
+    /**
+     * Enter current directory
+     *
+     * @param dir Current directory
+     * @return If SKIP is returned, no further action for this subbranch will be taken
+     * @throws IOException
+     */
     public VisitorResult preVisitDirectory(Path dir) throws IOException {
         return VisitorResult.CONTINUE;
     }
@@ -16,4 +23,9 @@ public class PathVisitor {
     public VisitorResult visitFile(Path file) throws IOException {
         return VisitorResult.CONTINUE;
     }
+
+    public VisitorResult postVisitDirectory(Path dir) throws IOException {
+        return VisitorResult.CONTINUE;
+    }
+
 }

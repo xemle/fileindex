@@ -20,7 +20,7 @@ public class FileMetaCacheWriterTest extends BasePathTest {
 
     @Test
     public void write() throws IOException {
-        Path base = PathUtils.getResourcePath("meta/foo");
+        Path base = PathUtils.getResourcePath("meta");
         FileMetaCache cache = new FileMetaCache(base);
 
 
@@ -31,7 +31,7 @@ public class FileMetaCacheWriterTest extends BasePathTest {
     }
 
     @Test
-    public void writeShouldBeReaded() throws IOException {
+    public void writeShouldBeRead() throws IOException {
         Path base = PathUtils.getResourcePath("meta/foo");
         FileMetaCache cache = new FileMetaCache(base);
 

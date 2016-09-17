@@ -3,16 +3,12 @@ package de.silef.service.file;
 import de.silef.service.file.index.FileIndex;
 import de.silef.service.file.index.FileIndexReader;
 import de.silef.service.file.index.FileIndexWriter;
-import de.silef.service.file.meta.FileMetaCache;
-import de.silef.service.file.meta.FileMetaCacheReader;
-import de.silef.service.file.meta.FileMetaCacheWriter;
-import de.silef.service.file.meta.FileMetaChanges;
+import de.silef.service.file.meta.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -41,7 +37,7 @@ public class FileIndexCli {
             changes = cache.getChanges(old);
         } else {
             System.out.println("Creating file cache");
-            FileMetaCache empty = new FileMetaCache(dir, new HashMap<>());
+            FileMetaCache empty = new FileMetaCache(dir, new FileMeta(null, dir));
             changes = cache.getChanges(empty);
         }
 

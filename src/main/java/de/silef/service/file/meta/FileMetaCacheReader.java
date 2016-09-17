@@ -2,7 +2,9 @@ package de.silef.service.file.meta;
 
 import java.io.*;
 import java.nio.file.Path;
-import java.util.*;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.zip.InflaterInputStream;
 
 import static de.silef.service.file.meta.FileMeta.MAGIC_HEADER;
@@ -23,7 +25,7 @@ public class FileMetaCacheReader {
             }
         } catch (IOException e) {
             if (suppressWarning) {
-                return new FileMetaCache(base, new HashMap<>());
+                return new FileMetaCache(base, new FileMeta(null, base));
             } else {
                 throw e;
             }
@@ -41,18 +43,14 @@ public class FileMetaCacheReader {
             if (header != MAGIC_HEADER) {
                 throw new IOException("Unexpected header: " + header);
             }
-            int size = dataInput.readInt();
-            for (int i = 0; i < size; i++) {
-                FileMeta meta = readObject(dataInput);
-                cache.put(meta.getPath(), meta);
-            }
-            return new FileMetaCache(base, cache);
+            FileMeta root = readObject(null, dataInput);
+            return new FileMetaCache(base, root);
         } catch (ClassNotFoundException | ClassCastException e) {
             throw new IOException("Could not read items", e);
         }
     }
 
-    private FileMeta readObject(DataInputStream input)
+    private FileMeta readObject(FileMeta parent, DataInputStream input)
             throws ClassNotFoundException, IOException {
 
         FileMode mode = FileMode.create(input.readInt());
@@ -61,8 +59,15 @@ public class FileMetaCacheReader {
         long modifiedTime = input.readLong();
         long inode = input.readLong();
 
-        String path = input.readUTF();
+        Path path = Paths.get(input.readUTF());
 
-        return new FileMeta(mode, size, creationTime, modifiedTime, inode, path);
+        FileMeta fileMeta = new FileMeta(parent, mode, size, creationTime, modifiedTime, inode, path);
+
+        int children = input.readInt();
+        for (int i = 0; i < children; i++) {
+            readObject(fileMeta, input);
+        }
+
+        return fileMeta;
     }
 }

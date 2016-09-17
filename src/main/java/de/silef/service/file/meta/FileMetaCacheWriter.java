@@ -23,13 +23,10 @@ public class FileMetaCacheWriter {
              BufferedOutputStream bufferedOutput = new BufferedOutputStream(deflaterOutput);
              DataOutputStream dataOutput = new DataOutputStream(bufferedOutput)) {
 
-            Collection<FileMeta> items = cache.getFileMetaItems();
+            FileMeta root = cache.getRoot();
 
             dataOutput.writeInt(MAGIC_HEADER);
-            dataOutput.writeInt(items.size());
-            for (FileMeta item : items) {
-                writeObject(item, dataOutput);
-            }
+            writeObject(root, dataOutput);
         }
     }
 
@@ -41,7 +38,13 @@ public class FileMetaCacheWriter {
         output.writeLong(fileMeta.getModifiedTime());
         output.writeLong(fileMeta.getInode());
 
-        output.writeUTF(fileMeta.getPath());
+        output.writeUTF(fileMeta.getName().toString());
+
+        Collection<FileMeta> children = fileMeta.getChildren();
+        output.writeInt(children.size());
+        for (FileMeta child : children) {
+            writeObject(child, output);
+        }
     }
 
 }

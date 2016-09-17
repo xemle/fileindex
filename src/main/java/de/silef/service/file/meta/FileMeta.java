@@ -1,12 +1,13 @@
 package de.silef.service.file.meta;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -15,7 +16,10 @@ public class FileMeta implements Serializable {
 
     static int MAGIC_HEADER = 0x23100702;
 
-    private String path;
+    private FileMeta parent;
+    private List<FileMeta> children = new LinkedList<>();
+
+    private Path name;
 
     private FileMode mode;
 
@@ -26,20 +30,27 @@ public class FileMeta implements Serializable {
 
     private long inode;
 
-    public FileMeta(FileMode mode, long size, long creationTime, long modifiedTime, long inode, String path) {
+    public FileMeta(FileMeta parent, FileMode mode, long size, long creationTime, long modifiedTime, long inode, Path name) {
+        setParent(parent);
         this.mode = mode;
         this.size = size;
         this.creationTime = creationTime;
         this.modifiedTime = modifiedTime;
         this.inode = inode;
-        this.path = path;
+        this.name = name;
     }
 
-    public FileMeta(Path file, String path) throws IOException {
-        if (path == null) {
+    private void addChild(FileMeta fileMeta) {
+        children.add(fileMeta);
+    }
+
+    public FileMeta(FileMeta parent, Path file) throws IOException {
+        if (file == null) {
             throw new NullPointerException("Path must not be null");
         }
-        this.path = path;
+        setParent(parent);
+
+        this.name = file.getFileName();
 
         size = Files.size(file);
 
@@ -87,8 +98,8 @@ public class FileMeta implements Serializable {
         return 0;
     }
 
-    public String getPath() {
-        return path;
+    public Path getName() {
+        return name;
     }
 
     public FileMode getMode() {
@@ -125,18 +136,35 @@ public class FileMeta implements Serializable {
         if (size != that.size) return false;
         if (mode != that.mode) return false;
 
-        return path.equals(that.path);
+        return name.equals(that.name);
     }
 
     @Override
     public int hashCode() {
-        int result = path.hashCode();
-        result = 31 * result + mode.value;
+        int result = mode.value;
         result = 31 * result + (int) (size ^ (size >>> 32));
         result = 31 * result + (int) (creationTime ^ (creationTime >>> 32));
         result = 31 * result + (int) (modifiedTime ^ (modifiedTime >>> 32));
         result = 31 * result + (int) (inode ^ (inode >>> 32));
+        result = 31 * result + name.hashCode();
         return result;
     }
 
+    public List<FileMeta> getChildren() {
+        return children;
+    }
+
+    public Path getRelativePath() {
+        if (parent != null) {
+            return parent.getRelativePath().resolve(name);
+        }
+        return Paths.get("");
+    }
+
+    public void setParent(FileMeta parent) {
+        this.parent = parent;
+        if (parent != null) {
+            parent.addChild(this);
+        }
+    }
 }

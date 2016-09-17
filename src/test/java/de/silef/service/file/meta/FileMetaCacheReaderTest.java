@@ -24,6 +24,6 @@ public class FileMetaCacheReaderTest {
         FileMetaCache cache = new FileMetaCacheReader().read(base, file);
 
 
-        assertThat(cache.getPaths().size(), is(209));
+        assertThat(cache.getPaths().size(), is(3));
     }
 }

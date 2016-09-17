@@ -21,6 +21,10 @@ public class PathWalker {
         if (!Files.isDirectory(base)) {
             return;
         }
+        VisitorResult result = pathVisitor.preVisitDirectory(base);
+        if (result != CONTINUE) {
+            return;
+        }
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(base)) {
             List<Path> paths = StreamSupport.stream(directoryStream.spliterator(), false).collect(Collectors.toList());
             for (Path path : paths) {
@@ -29,15 +33,13 @@ public class PathWalker {
                 }
 
                 if (Files.isDirectory(path)) {
-                    VisitorResult result = pathVisitor.preVisitDirectory(path);
-                    if (result == CONTINUE) {
-                        walk(path, pathVisitor);
-                    }
+                    walk(path, pathVisitor);
                 } else {
                     pathVisitor.visitFile(path);
                 }
             }
         }
+        pathVisitor.postVisitDirectory(base);
     }
 
 }
