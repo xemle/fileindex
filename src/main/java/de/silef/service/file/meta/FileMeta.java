@@ -1,6 +1,8 @@
 package de.silef.service.file.meta;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,12 +13,11 @@ import java.nio.file.attribute.BasicFileAttributes;
  */
 public class FileMeta implements Serializable {
 
+    static int MAGIC_HEADER = 0x23100702;
+
     private String path;
 
-    private boolean isDirectory;
-    private boolean isFile;
-    private boolean isLink;
-    private boolean isOther;
+    private FileMode mode;
 
     private long size;
 
@@ -25,24 +26,42 @@ public class FileMeta implements Serializable {
 
     private long inode;
 
+    public FileMeta(FileMode mode, long size, long creationTime, long modifiedTime, long inode, String path) {
+        this.mode = mode;
+        this.size = size;
+        this.creationTime = creationTime;
+        this.modifiedTime = modifiedTime;
+        this.inode = inode;
+        this.path = path;
+    }
+
     public FileMeta(Path file, String path) throws IOException {
         if (path == null) {
             throw new NullPointerException("Path must not be null");
         }
         this.path = path;
 
-        BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
-        isDirectory = attributes.isDirectory();
-        isFile = attributes.isRegularFile();
-        isLink = attributes.isSymbolicLink();
-        isOther = attributes.isOther();
-
         size = Files.size(file);
 
+        BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
+
+        mode = getMode(attributes);
         creationTime = attributes.creationTime().toMillis();
         modifiedTime = attributes.lastModifiedTime().toMillis();
 
         inode = readInode(attributes);
+    }
+
+    private FileMode getMode(BasicFileAttributes attributes) {
+        if (attributes.isRegularFile()) {
+            return FileMode.FILE;
+        } else if (attributes.isDirectory()) {
+            return FileMode.DIRECTORY;
+        } else if (attributes.isSymbolicLink()) {
+            return FileMode.LINK;
+        } else {
+            return FileMode.OTHER;
+        }
     }
 
     private long readInode(BasicFileAttributes attributes) {
@@ -68,6 +87,30 @@ public class FileMeta implements Serializable {
         return 0;
     }
 
+    public String getPath() {
+        return path;
+    }
+
+    public FileMode getMode() {
+        return mode;
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public long getCreationTime() {
+        return creationTime;
+    }
+
+    public long getModifiedTime() {
+        return modifiedTime;
+    }
+
+    public long getInode() {
+        return inode;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -80,11 +123,7 @@ public class FileMeta implements Serializable {
         if (creationTime != that.creationTime) return false;
 
         if (size != that.size) return false;
-
-        if (isDirectory != that.isDirectory) return false;
-        if (isFile != that.isFile) return false;
-        if (isLink != that.isLink) return false;
-        if (isOther != that.isOther) return false;
+        if (mode != that.mode) return false;
 
         return path.equals(that.path);
     }
@@ -92,10 +131,7 @@ public class FileMeta implements Serializable {
     @Override
     public int hashCode() {
         int result = path.hashCode();
-        result = 31 * result + (isDirectory ? 1 : 0);
-        result = 31 * result + (isFile ? 1 : 0);
-        result = 31 * result + (isLink ? 1 : 0);
-        result = 31 * result + (isOther ? 1 : 0);
+        result = 31 * result + mode.value;
         result = 31 * result + (int) (size ^ (size >>> 32));
         result = 31 * result + (int) (creationTime ^ (creationTime >>> 32));
         result = 31 * result + (int) (modifiedTime ^ (modifiedTime >>> 32));
@@ -103,7 +139,4 @@ public class FileMeta implements Serializable {
         return result;
     }
 
-    public String getPath() {
-        return path;
-    }
 }
