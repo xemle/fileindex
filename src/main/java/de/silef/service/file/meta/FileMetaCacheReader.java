@@ -12,7 +12,6 @@ import static de.silef.service.file.meta.FileMeta.MAGIC_HEADER;
  */
 public class FileMetaCacheReader {
 
-
     public FileMetaCache read(Path base, Path file) throws IOException {
         return read(base, file, false);
     }

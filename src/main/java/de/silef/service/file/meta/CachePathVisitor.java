@@ -30,7 +30,6 @@ public class CachePathVisitor extends PathVisitor {
         if (!Files.isReadable(path)) {
             return VisitorResult.SKIP;
         }
-        addCacheItem(path);
         return super.preVisitDirectory(path);
     }
 

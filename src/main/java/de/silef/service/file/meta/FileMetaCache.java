@@ -41,6 +41,10 @@ public class FileMetaCache {
         return cache.values();
     }
 
+    public Collection<String> getPaths() {
+        return cache.keySet();
+    }
+
     public FileMetaChanges getChanges() throws IOException {
         return getChanges(new FileMetaCache(base));
     }
