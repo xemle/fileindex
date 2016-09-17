@@ -21,14 +21,14 @@ public class FileMetaCacheWriter {
     public void write(FileMetaCache cache, OutputStream output) throws IOException {
         try (DeflaterOutputStream deflaterOutput = new DeflaterOutputStream(output);
              BufferedOutputStream bufferedOutput = new BufferedOutputStream(deflaterOutput);
-             DataOutputStream objectOutput = new DataOutputStream(bufferedOutput)) {
+             DataOutputStream dataOutput = new DataOutputStream(bufferedOutput)) {
 
             Collection<FileMeta> items = cache.getFileMetaItems();
 
-            objectOutput.writeInt(MAGIC_HEADER);
-            objectOutput.writeInt(items.size());
+            dataOutput.writeInt(MAGIC_HEADER);
+            dataOutput.writeInt(items.size());
             for (FileMeta item : items) {
-                writeObject(item, objectOutput);
+                writeObject(item, dataOutput);
             }
         }
     }

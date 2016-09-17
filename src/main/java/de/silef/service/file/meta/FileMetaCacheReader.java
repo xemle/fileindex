@@ -33,17 +33,17 @@ public class FileMetaCacheReader {
     private FileMetaCache read(Path base, InputStream input) throws IOException {
         try (InflaterInputStream inflaterInput = new InflaterInputStream(input);
              BufferedInputStream bufferedInput = new BufferedInputStream(inflaterInput);
-             DataInputStream objectInput = new DataInputStream(bufferedInput)) {
+             DataInputStream dataInput = new DataInputStream(bufferedInput)) {
 
             Map<String, FileMeta> cache = new HashMap<>();
 
-            int header = objectInput.readInt();
+            int header = dataInput.readInt();
             if (header != MAGIC_HEADER) {
                 throw new IOException("Unexpected header: " + header);
             }
-            int size = objectInput.readInt();
+            int size = dataInput.readInt();
             for (int i = 0; i < size; i++) {
-                FileMeta meta = readObject(objectInput);
+                FileMeta meta = readObject(dataInput);
                 cache.put(meta.getPath(), meta);
             }
             return new FileMetaCache(base, cache);

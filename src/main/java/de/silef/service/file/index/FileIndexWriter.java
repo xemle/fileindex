@@ -24,17 +24,17 @@ public class FileIndexWriter {
     private void write(FileIndex index, OutputStream output) throws IOException {
         try (DeflaterOutputStream deflaterOutput = new DeflaterOutputStream(output);
              BufferedOutputStream bufferedOutput = new BufferedOutputStream(deflaterOutput);
-             DataOutputStream objectOutput = new DataOutputStream(bufferedOutput)) {
+             DataOutputStream dataOutput = new DataOutputStream(bufferedOutput)) {
 
             Map<String, byte[]> items = index.getPathToHash();
 
-            objectOutput.writeInt(MAGIC_HEADER);
-            objectOutput.writeInt(items.size());
+            dataOutput.writeInt(MAGIC_HEADER);
+            dataOutput.writeInt(items.size());
             for (Map.Entry<String, byte[]> item : items.entrySet()) {
                 byte[] hash = item.getValue();
-                objectOutput.writeByte((byte) (0xff & hash.length));
-                objectOutput.write(hash);
-                objectOutput.writeUTF(item.getKey());
+                dataOutput.writeByte((byte) (0xff & hash.length));
+                dataOutput.write(hash);
+                dataOutput.writeUTF(item.getKey());
             }
         }
     }

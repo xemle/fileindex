@@ -38,17 +38,17 @@ public class FileIndexReader {
     private FileIndex read(Path base, InputStream input) throws IOException {
         try (InflaterInputStream inflaterInput = new InflaterInputStream(input);
              BufferedInputStream bufferedInput = new BufferedInputStream(inflaterInput);
-             DataInputStream objectInput = new DataInputStream(bufferedInput)) {
+             DataInputStream dataInput = new DataInputStream(bufferedInput)) {
 
             Map<String, byte[]> pathToHash = new HashMap<>();
 
-            int header = objectInput.readInt();
+            int header = dataInput.readInt();
             if (header != MAGIC_HEADER) {
                 throw new IOException("Unexpected header: " + header);
             }
-            int size = objectInput.readInt();
+            int size = dataInput.readInt();
             for (int i = 0; i < size; i++) {
-                readPathHash(objectInput, pathToHash);
+                readPathHash(dataInput, pathToHash);
             }
             return new FileIndex(base, pathToHash);
         } catch (ClassCastException e) {
