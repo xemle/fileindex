@@ -81,7 +81,7 @@ public class FileIndexCli {
         Options options = new Options();
 
         options.addOption("d", true, "Target directory to index. Default is current working directory");
-        options.addOption("h", false, "Shop this help");
+        options.addOption("h", false, "Print this help");
         options.addOption("i", true, "Index file to store. Default is ~/.cache/filecache/<dirname>.index");
 
         CommandLineParser parser = new PosixParser();
