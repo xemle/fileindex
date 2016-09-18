@@ -159,7 +159,7 @@ public class IndexNodeTest {
         FileHash hash = root.getHash();
 
 
-        assertThat(HashUtil.toHex(hash.getBytes()), is("67879e67d3c81d6f653416dcc984511b0e0de602"));
+        assertThat(HashUtil.toHex(hash.getBytes()), is("7e0953bdd7c8e3fbe607502407b336a696ab11fb"));
     }
 
     @Test

@@ -6,22 +6,22 @@ package de.silef.service.file.index;
  * Created by sebastian on 17.09.16.
  */
 public enum FileMode {
-    DIRECTORY ((byte) 1),
-    FILE      ((byte) 2),
-    LINK      ((byte) 4),
-    OTHER     ((byte) 0);
+    FILE      (0100000),
+    LINK      (0120000),
+    DIRECTORY (0040000),
+    OTHER     (0000000);
 
-    byte value;
+    int value;
 
-    FileMode(byte value) {
+    FileMode(int value) {
         this.value = value;
     }
 
-    public byte getValue() {
+    public int getValue() {
         return value;
     }
 
-    public static FileMode create(int value) {
+    static FileMode create(int value) {
         if (value == FILE.value) {
             return FILE;
         } else if (value == DIRECTORY.value) {
