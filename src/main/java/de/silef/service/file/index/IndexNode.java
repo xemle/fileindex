@@ -27,6 +27,13 @@ public class IndexNode {
         children = new ArrayList<>();
     }
 
+    IndexNode(List<IndexNode> children, byte[] hash) {
+        fileMode = FileMode.DIRECTORY;
+        this.name = "";
+        this.hash = hash;
+        this.children = children;
+    }
+
     IndexNode(String name, List<IndexNode> children) {
         fileMode = FileMode.DIRECTORY;
         this.name = name;
@@ -89,5 +96,9 @@ public class IndexNode {
             }
         }
         return null;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }

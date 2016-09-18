@@ -11,20 +11,20 @@ node is referenced by its content hash. The hash method is SHA-1.
 The index node holds a list of children with there content hash, type, and name.
 The name of a index node is build by the index node entry reference of its parent.
 
-The order is depth-first. The index node entries are sorted by their names. Lowest
-name first. Only directories are listed in the file index.
-
-The first index node is the root node. The root index node has the an empty string 
-as name.
+Only directories are listed in the file index. The order is post order depth-first. 
+The first directory entry has no subdirectory. The last index node is the root node. 
+The root index node has the an empty string as name.
 
 The file index is with zlib algorithm compressed.
+
+The index node entries are sorted by their names. Lowest name first.  
 
 
     +----------------+
     |    4 bytes     |  Header 0x08020305
     +----------------+
     +----------------+
-    |    2 bytes     |  Length of index node 
+    |    4 bytes     |  Length of index node 
     +----------------+
     |    n bytes     |  Index node content
     /                /
@@ -39,7 +39,7 @@ A index node entry has a 20 byte SHA-1 hash, one byte type, length of the
 UTF-8 name and the name.
  
     +----------------+
-    |    2 bytes     |  Length of index node 
+    |    4 bytes     |  Length of index node 
     +----------------+
     +----------------+
     |    20 bytes    |  SHA-1 hash bytes of node entry

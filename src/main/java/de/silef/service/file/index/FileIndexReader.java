@@ -2,6 +2,8 @@ package de.silef.service.file.index;
 
 import de.silef.service.file.meta.FileMode;
 import de.silef.service.file.util.HashUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +19,9 @@ import static de.silef.service.file.util.HashUtil.HASH_LEN;
  * Created by sebastian on 17.09.16.
  */
 public class FileIndexReader {
+
+    private static final Logger LOG = LoggerFactory.getLogger(FileIndexReader.class);
+
     public FileIndex read(Path base, Path file) throws IOException {
         return read(base, file, false);
     }
@@ -45,7 +50,7 @@ public class FileIndexReader {
                 throw new IOException("Unexpected header: " + header);
             }
 
-            IndexNode root = readIndexNode(dataInput);
+            IndexNode root = readIndexRoot(dataInput);
 
             return new FileIndex(base, root);
         } catch (ClassCastException | IllegalArgumentException | IndexOutOfBoundsException e) {
@@ -53,30 +58,28 @@ public class FileIndexReader {
         }
     }
 
-    private IndexNode readIndexNode(DataInputStream dataInput) throws IOException {
-        Map<String, String> hashToName = new HashMap<>();
+    private IndexNode readIndexRoot(DataInputStream dataInput) throws IOException {
+        Map<String, IndexNode> hashToNode = new HashMap<>();
         byte[] buf = new byte[1024];
         IndexNode root = null;
 
-        while (dataInput.read(buf, 0, 2) == 2) {
-            int size = readShort(buf);
+        while (dataInput.read(buf, 0, 4) == 4) {
+            int size = readInt(buf, 0);
             buf = resizeBuffer(buf, size);
             int read = dataInput.read(buf, 0, size);
             if (read != size) {
                 throw new IOException("Failed to read " + size + " bytes. Got " + read + " bytes");
             }
 
-            byte[] nodeHash = HashUtil.getHash(buf, 0, size);
-            IndexNode indexNode = readChildren(buf, size, nodeHash, hashToName);
-            if (root == null) {
-                root = indexNode;
-            }
+            byte[] hash = HashUtil.getHash(buf, 0, size);
+            root = readNode(buf, size, hash, hashToNode);
+            hashToNode.put(HashUtil.toHex(hash), root);
         }
+
         return root;
     }
 
-    private IndexNode readChildren(byte[] buf, int bufLen, byte[] nodeHash, Map<String, String> hashToName) {
-        String nodeName = getNodeName(nodeHash, hashToName);
+    private IndexNode readNode(byte[] buf, int bufLen, byte[] nodeHash, Map<String, IndexNode> hashToNode) {
         List<IndexNode> children = new LinkedList<>();
 
         int pos = 0;
@@ -90,19 +93,28 @@ public class FileIndexReader {
             String name = new String(buf, pos, length, StandardCharsets.UTF_8);
             pos += length;
 
-            children.add(new IndexNode(fileMode, name, hash));
-            hashToName.put(HashUtil.toHex(hash), name);
+            IndexNode child;
+            if (fileMode == FileMode.DIRECTORY) {
+                child = hashToNode.get(HashUtil.toHex(hash));
+                child.setName(name);
+            } else {
+                child = new IndexNode(fileMode, name, hash);
+            }
+            children.add(child);
         }
 
-        return new IndexNode(nodeName, children, nodeHash);
+        return new IndexNode(children, nodeHash);
     }
 
-    private int readShort(byte[] buf) {
-        return readShort(buf, 0);
+    private int readInt(byte[] buf, int offset) {
+        return ((buf[offset] & 0xff) << 24) +
+               ((buf[offset + 1] & 0xff) << 16) +
+               ((buf[offset + 2] & 0xff) << 8) +
+               ((buf[offset + 3] & 0xff));
     }
 
     private int readShort(byte[] buf, int offset) {
-        return (buf[offset] << 8) + (buf[offset + 1]);
+        return ((buf[offset] & 0xff) << 8) + (buf[offset + 1] & 0xff);
     }
 
     private byte[] resizeBuffer(byte[] buf, int size) {
@@ -113,12 +125,12 @@ public class FileIndexReader {
         return result;
     }
 
-    private String getNodeName(byte[] nodeHash, Map<String, String> hashToName) {
+    private String getNodeName(byte[] nodeHash, Map<String, IndexNode> hashToNode) {
         String result;
-        if (hashToName.isEmpty()) {
+        if (hashToNode.isEmpty()) {
             result = "";
         } else {
-            result = hashToName.get(HashUtil.toHex(nodeHash));
+            result = hashToNode.get(HashUtil.toHex(nodeHash)).getName();
         }
         return result;
     }

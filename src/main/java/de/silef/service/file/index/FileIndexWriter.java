@@ -1,6 +1,8 @@
 package de.silef.service.file.index;
 
 import de.silef.service.file.meta.FileMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -13,6 +15,8 @@ import static de.silef.service.file.index.FileIndex.MAGIC_HEADER;
  * Created by sebastian on 17.09.16.
  */
 public class FileIndexWriter {
+
+    private static final Logger LOG = LoggerFactory.getLogger(FileIndexWriter.class);
 
     public void write(FileIndex index, Path path) throws IOException {
         try (FileOutputStream output = new FileOutputStream(path.toFile())) {
@@ -32,17 +36,17 @@ public class FileIndexWriter {
     }
 
     private void writeNode(IndexNode node, DataOutputStream output) throws IOException {
-        try (ByteArrayOutputStream buf = new ByteArrayOutputStream();
-             DataOutputStream dataOutput = new DataOutputStream(buf)) {
+        writeChildren(node, output);
+
+        try (ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+             DataOutputStream dataOutput = new DataOutputStream(buffer)) {
 
             node.writeChildren(dataOutput);
-            byte[] bytes = buf.toByteArray();
+            byte[] bytes = buffer.toByteArray();
 
-            output.writeShort(bytes.length);
+            output.writeInt(bytes.length);
             output.write(bytes);
         }
-
-        writeChildren(node, output);
     }
 
     private void writeChildren(IndexNode node, DataOutputStream output) throws IOException {

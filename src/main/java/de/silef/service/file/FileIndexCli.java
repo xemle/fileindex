@@ -4,6 +4,8 @@ import de.silef.service.file.index.FileIndex;
 import de.silef.service.file.index.FileIndexReader;
 import de.silef.service.file.index.FileIndexWriter;
 import de.silef.service.file.meta.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,6 +16,8 @@ import java.nio.file.Paths;
  * Created by sebastian on 17.09.16.
  */
 public class FileIndexCli {
+
+    private static final Logger LOG = LoggerFactory.getLogger(FileIndexCli.class);
 
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length < 1) {
@@ -45,9 +49,10 @@ public class FileIndexCli {
         if (Files.exists(indexFile)) {
             System.out.println("Reading file index");
             try {
-                index = new FileIndexReader().read(dir, indexFile, true);
+                index = new FileIndexReader().read(dir, indexFile);
             } catch (IOException e) {
                 index = null;
+                LOG.warn("Could not read file index", e);
             }
         }
         if (index == null) {

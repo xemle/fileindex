@@ -70,11 +70,13 @@ public class FileMetaCache {
 
 
         if (LOG.isInfoEnabled()) {
+            long totalSize = meta.values().stream().map(FileMetaNode::getSize).reduce(0L, (a, b) -> a + b);
             long createdSize = sumFileSize(created, meta);
             long modifiedSize = sumFileSize(modified, meta);
             long removedSize = sumFileSize(removed, otherMeta);
 
-            LOG.info("File changes: {} new files with {},  {} modified files with {},  {} deleted files with {}",
+            LOG.info("File changes of {} files with {}: {} new files with {},  {} modified files with {},  {} deleted files with {}",
+                    meta.size(), ByteUtil.toHumanSize(totalSize),
                     created.size(), ByteUtil.toHumanSize(createdSize),
                     modified.size(), ByteUtil.toHumanSize(modifiedSize),
                     removed.size(), ByteUtil.toHumanSize(removedSize));

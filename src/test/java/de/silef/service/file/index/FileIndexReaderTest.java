@@ -36,4 +36,11 @@ public class FileIndexReaderTest extends BasePathTest {
 
         assertThat(HashUtil.toHex(index.getRoot().getHash()), is("c764b5aabf3643a286e974725c124a4a63df4aab"));
     }
+
+    @Test
+    public void readTest() throws IOException {
+        Path indexFile = PathUtils.getResourcePath("fileindex");
+
+        FileIndex index = new FileIndexReader().read(tmp, indexFile);
+    }
 }
