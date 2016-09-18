@@ -1,5 +1,6 @@
 package de.silef.service.file.index;
 
+import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.test.BasePathTest;
 import de.silef.service.file.test.PathUtils;
 import org.junit.Test;
@@ -8,9 +9,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.*;
 
 /**
@@ -73,5 +76,22 @@ public class IndexChangeTest extends BasePathTest {
         assertThat(changes.getCreated().isEmpty(), is(true));
         assertThat(changes.getModified().isEmpty(), is(true));
         assertThat(pathNames, is(Arrays.asList("doe.txt")));
+    }
+
+    @Test
+    public void copyKnownHashesFromOldToNewIndex() throws IOException {
+        PathUtils.copy(PathUtils.getResourcePath("index/foo"), tmp);
+        FileIndex old = new FileIndex(tmp);
+
+        old.initializeTreeHash();
+
+        FileIndex update = new FileIndex(tmp);
+
+
+        update.getChanges(old);
+
+
+        IndexNode doe = update.getRoot().stream().filter(n -> n.getName().equals("doe.txt")).findFirst().get();
+        assertThat(doe.getHash().equals(FileHash.ZERO), is(false));
     }
 }

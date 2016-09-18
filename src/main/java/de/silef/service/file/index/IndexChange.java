@@ -1,5 +1,6 @@
 package de.silef.service.file.index;
 
+import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.util.ByteUtil;
 
 import java.nio.file.Path;
@@ -33,11 +34,31 @@ public class IndexChange {
         Map<Path, IndexNode> primary = getFileNodes(primaryRoot);
         Map<Path, IndexNode> other = getFileNodes(otherRoot);
 
+        copyKnownHashes(primary, other);
+
         Set<IndexNode> created = substract(primary, other);
         Set<IndexNode> modified = intersect(primary, other);
         Set<IndexNode> removed = substract(other, primary);
 
         return new IndexChange(base, created, modified, removed);
+    }
+
+    private static void copyKnownHashes(Map<Path, IndexNode> target, Map<Path, IndexNode> source) {
+        for (Map.Entry<Path, IndexNode> entry : source.entrySet()) {
+            IndexNode sourceNode = entry.getValue();
+            if (sourceNode.getMode() == FileMode.DIRECTORY) {
+                continue;
+            }
+
+            IndexNode targetNode = target.get(entry.getKey());
+            if (targetNode == null) {
+                continue;
+            }
+
+            if (!sourceNode.getHash().equals(FileHash.ZERO) && sourceNode.getInode() == targetNode.getInode()) {
+                targetNode.setHash(sourceNode.getHash());
+            }
+        }
     }
 
     private static Map<Path, IndexNode> getFileNodes(IndexNode root) {
