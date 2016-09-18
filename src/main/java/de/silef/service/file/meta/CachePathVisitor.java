@@ -51,7 +51,7 @@ public class CachePathVisitor extends PathVisitor {
 
     private FileMetaNode addCacheNode(Path path) throws IOException {
         FileMetaNode parent = parentStack.isEmpty() ? null : parentStack.get(parentStack.size() - 1);
-        return new FileMetaNode(parent, path);
+        return FileMetaNode.createFromPath(parent, path);
     }
 
 }

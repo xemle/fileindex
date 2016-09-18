@@ -4,9 +4,6 @@ import de.silef.service.file.hash.FileHash;
 
 import java.io.*;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.zip.InflaterInputStream;
 
 import static de.silef.service.file.meta.FileMetaNode.MAGIC_HEADER;
@@ -27,7 +24,7 @@ public class FileMetaCacheReader {
             }
         } catch (IOException e) {
             if (suppressWarning) {
-                return new FileMetaCache(base, new FileMetaNode(null, base));
+                return new FileMetaCache(base, FileMetaNode.createRootFromPath(base));
             } else {
                 throw e;
             }
@@ -63,10 +60,9 @@ public class FileMetaCacheReader {
         assert input.read(buf) == FileHash.LENGTH;
         FileHash hash = new FileHash(buf);
 
-        Path path = Paths.get(input.readUTF());
+        String name = input.readUTF();
 
-
-        FileMetaNode node = new FileMetaNode(parent, mode, size, creationTime, modifiedTime, inode, path, hash);
+        FileMetaNode node = FileMetaNode.createFromIndex(parent, mode, size, creationTime, modifiedTime, inode, hash, name);
 
         int children = input.readInt();
         for (int i = 0; i < children; i++) {

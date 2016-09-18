@@ -1,13 +1,17 @@
 package de.silef.service.file.meta;
 
 import de.silef.service.file.hash.FileHash;
+import de.silef.service.file.hash.HashUtil;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -21,7 +25,7 @@ public class FileMetaNode implements Serializable {
     private FileMetaNode parent;
     private List<FileMetaNode> children = new LinkedList<>();
 
-    private Path name;
+    private String name;
 
     private FileMode mode;
 
@@ -34,41 +38,56 @@ public class FileMetaNode implements Serializable {
 
     private FileHash hash = FileHash.ZERO;
 
-    public FileMetaNode(FileMetaNode parent, FileMode mode, long size, long creationTime, long modifiedTime, long inode, Path name, FileHash hash) {
-        setParent(parent);
-        this.mode = mode;
-        this.size = size;
-        this.creationTime = creationTime;
-        this.modifiedTime = modifiedTime;
-        this.inode = inode;
-        this.name = name;
-        this.hash = hash;
+    private FileMetaNode() {
+        super();
     }
 
-    private void addChild(FileMetaNode node) {
-        children.add(node);
+    public static FileMetaNode createFromIndex(FileMetaNode parent, FileMode mode, long size, long creationTime, long modifiedTime, long inode, FileHash hash, String name) {
+        FileMetaNode node = new FileMetaNode();
+
+        node.mode = mode;
+        node.size = size;
+        node.creationTime = creationTime;
+        node.modifiedTime = modifiedTime;
+        node.inode = inode;
+        node.name = name;
+        node.hash = hash;
+        node.children = new ArrayList<>();
+        node.setParent(parent);
+        node.sortChildren();
+
+        return node;
     }
 
-    public FileMetaNode(FileMetaNode parent, Path file) throws IOException {
+    public static FileMetaNode createRootFromPath(Path file) throws IOException {
+        return createFromPath(null, file);
+    }
+
+    public static FileMetaNode createFromPath(FileMetaNode parent, Path file) throws IOException {
         if (file == null) {
             throw new NullPointerException("Path must not be null");
         }
-        setParent(parent);
 
-        this.name = file.getFileName();
+        FileMetaNode node = new FileMetaNode();
 
-        size = Files.size(file);
+        node.name = file.getFileName().toString();
+        node.size = Files.size(file);
 
         BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
 
-        mode = getMode(attributes);
-        creationTime = attributes.creationTime().toMillis();
-        modifiedTime = attributes.lastModifiedTime().toMillis();
+        node.mode = getMode(attributes);
+        node.creationTime = attributes.creationTime().toMillis();
+        node.modifiedTime = attributes.lastModifiedTime().toMillis();
 
-        inode = readInode(attributes);
+        node.inode = readInode(attributes);
+
+        node.setParent(parent);
+        node.resetHashesToRootNode();
+
+        return node;
     }
 
-    private FileMode getMode(BasicFileAttributes attributes) {
+    private static FileMode getMode(BasicFileAttributes attributes) {
         if (attributes.isRegularFile()) {
             return FileMode.FILE;
         } else if (attributes.isDirectory()) {
@@ -80,7 +99,7 @@ public class FileMetaNode implements Serializable {
         }
     }
 
-    private long readInode(BasicFileAttributes attributes) {
+    private static long readInode(BasicFileAttributes attributes) {
         Object key = attributes.fileKey();
         if (key != null) {
             String value = key.toString();
@@ -103,7 +122,7 @@ public class FileMetaNode implements Serializable {
         return 0;
     }
 
-    public Path getName() {
+    public String getName() {
         return name;
     }
 
@@ -127,8 +146,33 @@ public class FileMetaNode implements Serializable {
         return inode;
     }
 
+    public void setHash(FileHash hash) {
+        assert hash != null : "Hash must not be null";
+
+        this.hash = hash;
+    }
+
     public FileHash getHash() {
+        if (hash == null) {
+            hash = calculateHash();
+        }
         return hash;
+    }
+
+    private FileHash calculateHash() {
+        try (ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+             DataOutputStream dataOutput = new DataOutputStream(buffer);) {
+
+            for (FileMetaNode child : children) {
+                dataOutput.write(child.getHash().getBytes());
+                dataOutput.write(child.getMode().getValue());
+                dataOutput.writeUTF(child.getName());
+            }
+            byte[] hash = HashUtil.getHash(buffer.toByteArray());
+            return new FileHash(hash);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not create node hash", e);
+        }
     }
 
     @Override
@@ -160,7 +204,49 @@ public class FileMetaNode implements Serializable {
     }
 
     public List<FileMetaNode> getChildren() {
-        return children;
+        return new ArrayList<>(children);
+    }
+
+    private void addChild(FileMetaNode node) {
+        removeChildByName(node.getName());
+        children.add(node);
+        sortChildren();
+    }
+
+    public FileMetaNode removeChildByName(String name) {
+        if (children.isEmpty()) {
+            return null;
+        }
+
+        int index = findChildIndexByName(name, 0, children.size() - 1);
+        if (index < 0) {
+            return null;
+        }
+
+        FileMetaNode node = children.remove(index);
+        sortChildren();
+        return node;
+    }
+
+    private int findChildIndexByName(String name, int low, int high) {
+        int i = low + (high - low);
+
+        FileMetaNode node = children.get(i);
+        assert node != null : "Child at " + i + " is null";
+        int cmp = node.getName().compareTo(name);
+
+        if (low == high && cmp != 0) {
+            return -1;
+        } else if (cmp < 0) {
+            return findChildIndexByName(name, low, i);
+        } else if (cmp > 0) {
+            return findChildIndexByName(name, i, high);
+        }
+        return i;
+    }
+
+    private void sortChildren() {
+        children.sort((a, b) -> a.getName().compareTo(b.getName()));
     }
 
     public Path getRelativePath() {
@@ -168,6 +254,14 @@ public class FileMetaNode implements Serializable {
             return parent.getRelativePath().resolve(name);
         }
         return Paths.get("");
+    }
+
+    public void resetHashesToRootNode() {
+        hash = null;
+
+        if (parent != null) {
+            parent.resetHashesToRootNode();
+        }
     }
 
     public void setParent(FileMetaNode parent) {

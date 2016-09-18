@@ -39,7 +39,7 @@ public class FileMetaCacheWriter {
         output.writeLong(node.getInode());
         output.write(node.getHash().getBytes());
 
-        output.writeUTF(node.getName().toString());
+        output.writeUTF(node.getName());
 
         Collection<FileMetaNode> children = node.getChildren();
         output.writeInt(children.size());
