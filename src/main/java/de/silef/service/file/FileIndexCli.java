@@ -179,6 +179,12 @@ public class FileIndexCli {
     private void printChange(IndexChange changes) {
         if (!changes.hasChanges()) {
             System.out.println("-  No changes");
+            return;
+        }
+        long totalChange = changes.getCreated().size() + changes.getModified().size() + changes.getRemoved().size();
+        if (totalChange > 256) {
+            System.out.println("Too many changes: " + totalChange + " modifications. Skip printing");
+            return;
         }
         List<String> lines = new LinkedList<>();
 
