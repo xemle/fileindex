@@ -1,64 +1,47 @@
-# File Index
+# File Index Cache
 
-The file index holds content hashes to files in a hash-tree structure. 
+The file index cache stores file meta data like type, size and timestamp for fast
+change lookup of a target path. The meta data is stored in `IndexNode` class.
 
-## Format
+The `FileIndexCache` can build and compare different file indices to detect created,
+changed, and deleted files.
 
-The file index holds index nodes. A index node is a directory container with lists
-of index node entries. Index node entries represent a file in a directory. The index
-node is referenced by its content hash. The hash method is SHA-1.
+The file index data might provide integrity checks. For Unix systems, the file meta
+data contains also the inode which supports to identify changes within the file.
 
-The index node holds a list of children with there content hash, type, and name.
-The name of a index node is build by the index node entry reference of its parent.
+The file meta data is serialized and stored with zlib compression, since 
+lot of data are strings from file paths. The meta data is stored in a tree in 
+depth first order.
 
-Only directories are listed in the file index. The order is post order depth-first. 
-The first directory entry has no subdirectory. The last index node is the root node. 
-The root index node has the an empty string as name.
-
-The file index is with zlib algorithm compressed.
-
-The index node entries are sorted by their names. Lowest name first.  
-
+# File Format
 
     +----------------+
-    |    4 bytes     |  Header 0x08020305
+    |    4 bytes     |  Header 0x23100702
     +----------------+
     +----------------+
-    |    4 bytes     |  Length of index node 
+    |    4 bytes     |  File stat, see man 2 stat
     +----------------+
-    |    n bytes     |  Index node content
-    /                /
+    |    8 bytes     |  File size
     |                |
     +----------------+
-    +----------------+
-    |      ....      |  Next index node
-
-
-An index node is build by its size, followed by a list of index node entries.
-A index node entry has a 20 byte SHA-1 hash, one byte type, length of the 
-UTF-8 name and the name.
- 
-    +----------------+
-    |    4 bytes     |  Length of index node 
-    +----------------+
-    +----------------+
-    |    20 bytes    |  SHA-1 hash bytes of node entry
-    |                |
+    |    8 bytes     |  Created timestamp
     |                |
     +----------------+
-    |     1 byte     |  Entry type
+    |    8 bytes     |  Modified timestamp
     |                |
     +----------------+
-    |    2 bytes     |  Length of path in UTF-8
+    |    8 bytes     |  inode value or 0
     |                |
     +----------------+
-    |    n bytes     |  path in UTF-8
-    |                |
+    |   20 bytes     |  Hash value
+    +--------+-------+
+    | 2 bytes|       |  Length and name in UTF-8
+    +--------+       +
+    |     n-bytes    |
     |                |
     +----------------+
+    |    4 bytes     |  Children count
     +----------------+
-    |      ....      |  Next node entry
-
-## Entry Type Values 
-
-1 for directory, 2 for file, 4 for symlink. 0 otherwise. 
+    +----------------+
+    |      ....      |  Next file meta item. Children first
+        

@@ -1,48 +1,34 @@
 package de.silef.service.file.index;
 
-import de.silef.service.file.meta.FileMetaChanges;
-import de.silef.service.file.test.BasePathTest;
 import de.silef.service.file.test.PathUtils;
-import de.silef.service.file.hash.HashUtil;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileIndexReaderTest extends BasePathTest {
+public class FileIndexReaderTest {
 
     @Test
     public void read() throws IOException {
-        Path indexFile = tmp.resolve("index");
-        Path base = PathUtils.getResourcePath("meta");
-        FileIndex index = new FileIndex(base);
-
-        FileMetaChanges changes = new FileMetaChanges(base, new HashSet<>(Arrays.asList("foo/doe.txt")), new HashSet<>(), new HashSet<>());
-        index.updateChanges(changes, false);
-
-        new FileIndexWriter().write(index, indexFile);
+        Path base = Paths.get(".");
+        Path file = PathUtils.getResourcePath("meta/filecache");
 
 
-        index = new FileIndexReader().read(base, indexFile);
+        FileIndex cache = new FileIndexReader().read(base, file);
 
 
-        assertThat(HashUtil.toHex(index.getRoot().getHash()), is("c764b5aabf3643a286e974725c124a4a63df4aab"));
-    }
-
-    @Ignore
-    @Test
-    public void readTest() throws IOException {
-        Path indexFile = PathUtils.getResourcePath("fileindex");
-
-        FileIndex index = new FileIndexReader().read(tmp, indexFile);
+        List<String> paths = cache.getRoot().stream().map(n -> n.getRelativePath().toString()).collect(Collectors.toList());
+        assertThat(paths, is(Arrays.asList("", "filecache", "foo", "foo/bar", "foo/bar/zoo.txt", "foo/doe.txt")));
     }
 }

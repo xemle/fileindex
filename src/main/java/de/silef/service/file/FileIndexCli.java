@@ -1,6 +1,8 @@
 package de.silef.service.file;
 
-import de.silef.service.file.meta.*;
+import de.silef.service.file.hash.HashUtil;
+import de.silef.service.file.index.*;
+import de.silef.service.file.util.ByteUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,51 +20,40 @@ public class FileIndexCli {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length < 1) {
-            System.out.println("FileIndexCli [dir]");
+            LOG.error("FileIndexCli [dir]");
             System.exit(1);
         }
         Path dir = Paths.get(args[0]);
         if (!dir.toFile().isDirectory()) {
-            System.out.println("File must be an directory: " + dir);
+            LOG.error("Path must be an directory: " + dir);
             System.exit(1);
         }
 
-        Path cacheFile = dir.resolve(".filecache");
         Path indexFile = dir.resolve(".fileindex");
 
-        FileIndex cache = new FileIndex(dir);
-        IndexChanges changes;
-        if (Files.exists(cacheFile)) {
-            System.out.println("Reading file cache");
-            FileIndex old = new FileIndexReader().read(dir, cacheFile);
-            changes = cache.getChanges(old);
+        LOG.info("Reading file index data from {}", dir.toAbsolutePath());
+        FileIndex index = new FileIndex(dir);
+        LOG.info("Found {} files of {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+
+        if (Files.exists(indexFile)) {
+            LOG.info("Reading existing file index from {}", indexFile);
+            FileIndex old = new FileIndexReader().read(dir, indexFile);
+
+            LOG.info("Calculating file changes");
+            IndexChange changes = index.getChanges(old);
+
+            LOG.info("Updating file index of {} files with {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+            index.updateChanges(changes, false);
+            LOG.info("Updated file index");
         } else {
-            System.out.println("Creating file cache");
-            FileIndex empty = new FileIndex(dir, IndexNode.createRootFromPath(dir));
-            changes = cache.getChanges(empty);
+            LOG.info("Creating file index. This might take some time!");
+            index.initializeTreeHash();
+            LOG.info("File index created");
         }
 
-        de.silef.service.file.index.FileIndex index = null;
-        if (Files.exists(indexFile)) {
-            System.out.println("Reading file index");
-            try {
-                index = new de.silef.service.file.index.FileIndexReader().read(dir, indexFile);
-            } catch (IOException e) {
-                index = null;
-                LOG.warn("Could not read file index", e);
-            }
-        }
-        if (index == null) {
-            System.out.println("Creating file index");
-            index = new de.silef.service.file.index.FileIndex(dir);
-        }
-        System.out.println("Updating file index");
-        index.updateChanges(changes, false);
-        if (changes.hasChanges()) {
-            new de.silef.service.file.index.FileIndexWriter().write(index, indexFile);
-            System.out.println("File index is updated");
-            new FileIndexWriter().write(cache, cacheFile);
-            System.out.println("File cache is updated");
-        }
+        LOG.info("Writing file index data to {} with {} file of {}", indexFile, index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+        new FileIndexWriter().write(index, indexFile);
+        LOG.info("Written file index data to {}. The index root hash is {}", indexFile, index.getRoot().getHash());
+
     }
 }

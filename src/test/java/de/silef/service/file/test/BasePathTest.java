@@ -15,7 +15,7 @@ public abstract class BasePathTest {
 
     @Before
     public void setUp() throws IOException {
-        tmp = Files.createTempDirectory("file-meta-cache-writer-");
+        tmp = Files.createTempDirectory("file-index-test-");
     }
 
     @After

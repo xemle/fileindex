@@ -1,104 +1,312 @@
 package de.silef.service.file.index;
 
-import de.silef.service.file.meta.FileMode;
-import de.silef.service.file.util.HashUtil;
+import de.silef.service.file.hash.FileHash;
+import de.silef.service.file.hash.HashUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  * Created by sebastian on 17.09.16.
  */
-public class IndexNode {
+public class IndexNode implements Serializable {
 
-    private FileMode fileMode;
+    static int MAGIC_HEADER = 0x23100702;
+
+    private IndexNode parent = null;
+    private List<IndexNode> children = new LinkedList<>();
+
     private String name;
-    private byte[] hash;
 
-    private List<IndexNode> children;
+    private FileMode mode;
 
-    IndexNode(String name, byte[] hash) {
-        this.fileMode = FileMode.FILE;
-        this.name = name;
-        this.hash = hash;
-        children = new ArrayList<>();
+    private long size;
+
+    private long creationTime;
+    private long modifiedTime;
+
+    private long inode = 0;
+
+    private FileHash hash = FileHash.ZERO;
+
+    private IndexNode() {
+        super();
     }
 
-    IndexNode(List<IndexNode> children, byte[] hash) {
-        fileMode = FileMode.DIRECTORY;
-        this.name = "";
-        this.hash = hash;
-        this.children = children;
+    public static IndexNode createFromIndex(IndexNode parent, FileMode mode, long size, long creationTime, long modifiedTime, long inode, FileHash hash, String name) {
+        IndexNode node = new IndexNode();
+
+        node.mode = mode;
+        node.size = size;
+        node.creationTime = creationTime;
+        node.modifiedTime = modifiedTime;
+        node.inode = inode;
+        node.name = name;
+        node.hash = hash;
+        node.children = new ArrayList<>();
+        node.setParent(parent);
+        node.sortChildren();
+
+        return node;
     }
 
-    IndexNode(String name, List<IndexNode> children) {
-        fileMode = FileMode.DIRECTORY;
-        this.name = name;
-        this.children = children;
-        hash = null;
+    public static IndexNode createRootFromPath(Path file) throws IOException {
+        assert Files.isDirectory(file) : "Root must be a directory";
+
+        return createFromPath(file, "");
     }
 
-    IndexNode(String name, List<IndexNode> children, byte[] hash) {
-        fileMode = FileMode.DIRECTORY;
-        this.name = name;
-        this.children = children;
-        this.hash = hash;
+    public static IndexNode createFromPath(IndexNode parent, Path file) throws IOException {
+        assert parent != null : "Parent must not be null";
+
+        IndexNode node = createFromPath(file, file.getFileName().toString());
+        node.setParent(parent);
+
+        return node;
     }
 
-    IndexNode(FileMode fileMode, String name, byte[] hash) {
-        this.fileMode = fileMode;
-        this.name = name;
-        this.hash = hash;
-        this.children = new ArrayList<>();
+    private static IndexNode createFromPath(Path file, String name) throws IOException {
+        assert file != null : "Path must not be null";
+        assert name != null : "Name must not be null";
+
+        IndexNode node = new IndexNode();
+
+        node.size = Files.size(file);
+
+        BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
+
+        node.mode = getMode(attributes);
+        node.creationTime = attributes.creationTime().toMillis();
+        node.modifiedTime = attributes.lastModifiedTime().toMillis();
+
+        node.inode = readInode(attributes);
+        node.hash = FileHash.ZERO;
+
+        node.name = name;
+
+        return node;
     }
 
-    void writeChildren(DataOutputStream output) throws IOException {
-        if (fileMode != FileMode.DIRECTORY) {
-            return;
+    private static FileMode getMode(BasicFileAttributes attributes) {
+        if (attributes.isRegularFile()) {
+            return FileMode.FILE;
+        } else if (attributes.isDirectory()) {
+            return FileMode.DIRECTORY;
+        } else if (attributes.isSymbolicLink()) {
+            return FileMode.LINK;
+        } else {
+            return FileMode.OTHER;
         }
-        for (IndexNode child : children) {
-            output.write(child.getHash());
-            output.write(child.getFileMode().getValue());
-            output.writeUTF(child.getName());
+    }
+
+    private static long readInode(BasicFileAttributes attributes) {
+        Object key = attributes.fileKey();
+        if (key != null) {
+            String value = key.toString();
+            int start = value.indexOf("ino=");
+            if (start >= 0) {
+                start += 4;
+                int end = start;
+                while (end < value.length()) {
+                    char c = value.charAt(end);
+                    if (c < '0' || c > '9') {
+                        break;
+                    }
+                    end++;
+                }
+                if (start < end) {
+                    return Long.parseLong(value.substring(start, end));
+                }
+            }
         }
+        return 0;
     }
 
-    FileMode getFileMode() {
-        return fileMode;
-    }
-
-    String getName() {
+    public String getName() {
         return name;
     }
 
-    byte[] getHash() throws IOException {
+    public FileMode getMode() {
+        return mode;
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public long getCreationTime() {
+        return creationTime;
+    }
+
+    public long getModifiedTime() {
+        return modifiedTime;
+    }
+
+    public long getInode() {
+        return inode;
+    }
+
+    public void setHash(FileHash hash) {
+        assert hash != null : "Hash must not be null";
+
+        this.hash = hash;
+    }
+
+    public FileHash getHash() {
         if (hash == null) {
-            try (ByteArrayOutputStream output = new ByteArrayOutputStream();
-                DataOutputStream dataOutput = new DataOutputStream(output);) {
-                writeChildren(dataOutput);
-                hash = HashUtil.getHash(output.toByteArray());
-            }
+            hash = calculateHash();
         }
         return hash;
     }
 
-    List<IndexNode> getChildren() {
-        return children;
-    }
+    private FileHash calculateHash() {
+        try (ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+             DataOutputStream dataOutput = new DataOutputStream(buffer);) {
 
-    IndexNode findChild(String name) {
-        for (IndexNode child : children) {
-            if (child.getName().equals(name)) {
-                return child;
+            for (IndexNode child : children) {
+                dataOutput.write(child.getHash().getBytes());
+                dataOutput.write(child.getMode().getValue());
+                dataOutput.writeUTF(child.getName());
             }
+            byte[] hash = HashUtil.getHash(buffer.toByteArray());
+            return new FileHash(hash);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not create node hash", e);
         }
-        return null;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        IndexNode that = (IndexNode) o;
+
+        if (inode != that.inode) return false;
+        if (modifiedTime != that.modifiedTime) return false;
+        if (creationTime != that.creationTime) return false;
+
+        if (size != that.size) return false;
+        if (mode != that.mode) return false;
+
+        return name.equals(that.name);
     }
+
+    @Override
+    public int hashCode() {
+        int result = mode.value;
+        result = 31 * result + (int) (size ^ (size >>> 32));
+        result = 31 * result + (int) (creationTime ^ (creationTime >>> 32));
+        result = 31 * result + (int) (modifiedTime ^ (modifiedTime >>> 32));
+        result = 31 * result + (int) (inode ^ (inode >>> 32));
+        result = 31 * result + name.hashCode();
+        return result;
+    }
+
+    public List<IndexNode> getChildren() {
+        return new ArrayList<>(children);
+    }
+
+    void addChild(IndexNode node) {
+        removeChildByName(node.getName());
+        children.add(node);
+        sortChildren();
+    }
+
+    public IndexNode removeChildByName(String name) {
+        if (children.isEmpty()) {
+            return null;
+        }
+
+        int index = findChildIndexByName(name);
+        if (index < 0) {
+            return null;
+        }
+
+        IndexNode node = children.remove(index);
+        sortChildren();
+        return node;
+    }
+
+    public IndexNode findChildByName(String name) {
+        int index = findChildIndexByName(name);
+        if (index < 0) {
+            return null;
+        }
+        return children.get(index);
+    }
+
+    private int findChildIndexByName(String name) {
+        return findChildIndexByName(name, 0, children.size() - 1);
+    }
+
+    private int findChildIndexByName(String name, int low, int high) {
+        if (low > high) {
+            return -1;
+        }
+        int i = low + (high - low);
+
+        IndexNode node = children.get(i);
+        assert node != null : "Child at " + i + " is null";
+        int cmp = node.getName().compareTo(name);
+
+        if (cmp > 0) {
+            return findChildIndexByName(name, low, i - 1);
+        } else if (cmp < 0) {
+            return findChildIndexByName(name, i + 1, high);
+        }
+        return i;
+    }
+
+    private void sortChildren() {
+        children.sort((a, b) -> a.getName().compareTo(b.getName()));
+    }
+
+    public Path getRelativePath() {
+        if (parent == null) {
+            return Paths.get("");
+        }
+        return parent.getRelativePath().resolve(name);
+    }
+
+    public void resetHashesToRootNode() {
+        hash = null;
+
+        if (parent != null) {
+            parent.resetHashesToRootNode();
+        }
+    }
+
+    public void setParent(IndexNode parent) {
+        this.parent = parent;
+        if (parent != null) {
+            parent.addChild(this);
+        }
+    }
+
+    public void walk(Consumer<IndexNode> consumer) {
+        consumer.accept(this);
+
+        for (IndexNode child : children) {
+            child.walk(consumer);
+        }
+    }
+
+    public Stream<IndexNode> stream() {
+        Stream.Builder<IndexNode> builder = Stream.builder();
+        walk(builder);
+        return builder.build();
+    }
+
 }

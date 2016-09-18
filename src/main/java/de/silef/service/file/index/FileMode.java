@@ -1,4 +1,4 @@
-package de.silef.service.file.meta;
+package de.silef.service.file.index;
 
 /**
  * See man 2 stat for description

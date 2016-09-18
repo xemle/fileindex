@@ -1,60 +1,49 @@
 package de.silef.service.file.index;
 
-import de.silef.service.file.meta.FileMode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.*;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.zip.DeflaterOutputStream;
 
-import static de.silef.service.file.index.FileIndex.MAGIC_HEADER;
-
+import static de.silef.service.file.index.IndexNode.MAGIC_HEADER;
 
 /**
  * Created by sebastian on 17.09.16.
  */
 public class FileIndexWriter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(FileIndexWriter.class);
-
-    public void write(FileIndex index, Path path) throws IOException {
+    public void write(FileIndex cache, Path path) throws IOException {
         try (FileOutputStream output = new FileOutputStream(path.toFile())) {
-            write(index, output);
+            write(cache, output);
         }
     }
 
-    private void write(FileIndex index, OutputStream output) throws IOException {
+    public void write(FileIndex cache, OutputStream output) throws IOException {
         try (DeflaterOutputStream deflaterOutput = new DeflaterOutputStream(output);
              BufferedOutputStream bufferedOutput = new BufferedOutputStream(deflaterOutput);
              DataOutputStream dataOutput = new DataOutputStream(bufferedOutput)) {
 
+            IndexNode root = cache.getRoot();
+
             dataOutput.writeInt(MAGIC_HEADER);
-
-            writeNode(index.getRoot(), dataOutput);
+            writeNode(root, dataOutput);
         }
     }
 
-    private void writeNode(IndexNode node, DataOutputStream output) throws IOException {
-        writeChildren(node, output);
+    private void writeNode(IndexNode node, DataOutputStream output)
+            throws IOException {
+        output.writeInt(node.getMode().getValue());
+        output.writeLong(node.getSize());
+        output.writeLong(node.getCreationTime());
+        output.writeLong(node.getModifiedTime());
+        output.writeLong(node.getInode());
+        output.write(node.getHash().getBytes());
 
-        try (ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-             DataOutputStream dataOutput = new DataOutputStream(buffer)) {
+        output.writeUTF(node.getName());
 
-            node.writeChildren(dataOutput);
-            byte[] bytes = buffer.toByteArray();
-
-            output.writeInt(bytes.length);
-            output.write(bytes);
-        }
-    }
-
-    private void writeChildren(IndexNode node, DataOutputStream output) throws IOException {
-        for (IndexNode child : node.getChildren()) {
-            if (child.getFileMode() != FileMode.DIRECTORY) {
-                continue;
-            }
-
+        Collection<IndexNode> children = node.getChildren();
+        output.writeInt(children.size());
+        for (IndexNode child : children) {
             writeNode(child, output);
         }
     }

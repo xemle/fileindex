@@ -1,4 +1,4 @@
-package de.silef.service.file.meta;
+package de.silef.service.file.index;
 
 import de.silef.service.file.util.PathVisitor;
 
@@ -11,13 +11,13 @@ import java.util.List;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class CachePathVisitor extends PathVisitor {
+public class IndexPathVisitor extends PathVisitor {
 
     private List<IndexNode> parentStack;
 
     private IndexNode root;
 
-    public CachePathVisitor() throws IOException {
+    public IndexPathVisitor() throws IOException {
         parentStack = new ArrayList<>();
     }
 
@@ -30,14 +30,14 @@ public class CachePathVisitor extends PathVisitor {
         if (!Files.isReadable(path)) {
             return VisitorResult.SKIP;
         }
-        parentStack.add(addCacheNode(path));
+        parentStack.add(addIndexNode(path));
         return super.preVisitDirectory(path);
     }
 
     @Override
     public VisitorResult visitFile(Path path) throws IOException {
         if (Files.isReadable(path)) {
-            addCacheNode(path);
+            addIndexNode(path);
         }
         return super.visitFile(path);
     }
@@ -49,8 +49,12 @@ public class CachePathVisitor extends PathVisitor {
     }
 
 
-    private IndexNode addCacheNode(Path path) throws IOException {
-        IndexNode parent = parentStack.isEmpty() ? null : parentStack.get(parentStack.size() - 1);
+    private IndexNode addIndexNode(Path path) throws IOException {
+        if (parentStack.isEmpty()) {
+            return IndexNode.createRootFromPath(path);
+        }
+
+        IndexNode parent = parentStack.get(parentStack.size() - 1);
         return IndexNode.createFromPath(parent, path);
     }
 
