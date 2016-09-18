@@ -24,16 +24,17 @@ The file index is read and written in the given path in the `.fileindex` file.
 
 For help use `-h` option:
  
-    $ java -jar target/fileindex-1.0.0-SNAPSHOT-cli.jar -h
     usage: fileindex <options> [path]
     
     Following options are available:
-     -h         Print this help
-     -i <arg>   Index file to store. Default is
-                ~/.cache/filecache/<dirname>.index
-     -q         Quiet mode
-
-Please consult fileindex.log for detailed program information
+     -h                           Print this help
+     -i <arg>                     Index file to store. Default is
+                                  ~/.cache/filecache/<dirname>.index
+     -M,--verify-max-size <arg>   Limit content integrity verification 
+                                  file by size
+     -q                           Quiet mode
+    
+    Please consult fileindex.log for detailed program information
 
 ## Requirements
 

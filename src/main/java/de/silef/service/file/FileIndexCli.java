@@ -3,6 +3,7 @@ package de.silef.service.file;
 import de.silef.service.file.index.*;
 import de.silef.service.file.util.ByteUtil;
 import org.apache.commons.cli.*;
+import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +14,7 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -28,39 +30,56 @@ public class FileIndexCli {
         this.cmd = cmd;
     }
 
-    private void run() throws IOException {
+    private void run() throws IOException, java.text.ParseException {
         Path base = getBase();
         Path indexFile = getIndexFile(base);
 
-        LOG.debug("Reading file index data from {}", base.toAbsolutePath());
-        FileIndex index = new FileIndex(base);
-        LOG.info("Found {} files of {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+        Predicate<Path> pathIndexFilter = p -> true;
+        Predicate<IndexNode> hashNodeFilter = getHashNodeFilter();
 
-        int exitCode = 0;
-        boolean writeIndex = false;
+        FileIndex index = readIndexMetaData(base, pathIndexFilter, hashNodeFilter);
 
-        if (Files.exists(indexFile)) {
-            IndexChange changes = getIndexChanges(base, indexFile, index);
+        if (!Files.exists(indexFile)) {
+            initializeIndex(index);
+            writeIndex(index, indexFile);
+            System.out.println("File index successfully created");
+        } else {
+            IndexChange changes = getIndexChanges(base, pathIndexFilter, hashNodeFilter, indexFile, index);
 
             if (changes.hasChanges()) {
-                exitCode = 1;
-                writeIndex = true;
-
                 updateIndex(index, changes);
+                writeIndex(index, indexFile);
+                System.exit(1);
             }
-        } else {
-            initializeIndex(index);
-            writeIndex = true;
         }
-
-        if (writeIndex) {
-            writeIndex(indexFile, index);
-        }
-
-        System.exit(exitCode);
     }
 
-    private void writeIndex(Path indexFile, FileIndex index) throws IOException {
+    private FileIndex readIndexMetaData(Path base, Predicate<Path> pathIndexFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
+        LOG.debug("Reading file index data from {}", base.toAbsolutePath());
+        FileIndex index = new FileIndex(base, pathIndexFilter, hashNodeFilter);
+        LOG.info("Found {} files of {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+        return index;
+    }
+
+    private Predicate<IndexNode> getHashNodeFilter() throws java.text.ParseException {
+        Predicate<IndexNode> filter = node -> true;
+        if (cmd.hasOption('M')) {
+            long maxSize = ByteUtil.toByte(cmd.getOptionValue('M'));
+            filter = node -> {
+                if (node.getSize() > maxSize) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("File exceeds verification size of {}: {} with {}", ByteUtil.toHumanSize(maxSize), node.getRelativePath(), ByteUtil.toHumanSize(node.getSize()));
+                    }
+                    return false;
+                }
+                return true;
+            };
+            LOG.info("Limit content integrity verification to {} ({} bytes)", ByteUtil.toHumanSize(maxSize), maxSize);
+        }
+        return filter;
+    }
+
+    private void writeIndex(FileIndex index, Path indexFile) throws IOException {
         LOG.debug("Writing file index data to {} with {} file of {}", indexFile, index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
         new IndexNodeWriter().write(index.getRoot(), indexFile);
         LOG.info("Written file index data to {}. The index root hash is {}", indexFile, index.getRoot().getHash());
@@ -78,10 +97,10 @@ public class FileIndexCli {
         LOG.debug("Updated file index");
     }
 
-    private IndexChange getIndexChanges(Path base, Path indexFile, FileIndex index) throws IOException {
+    private IndexChange getIndexChanges(Path base, Predicate<Path> pathIndexFilter, Predicate<IndexNode> hashNodeFilter, Path indexFile, FileIndex index) throws IOException {
         LOG.debug("Reading existing file index from {}", indexFile);
         IndexNode root = new IndexNodeReader().read(base, indexFile);
-        FileIndex old = new FileIndex(base, root);
+        FileIndex old = new FileIndex(base, root, pathIndexFilter, hashNodeFilter);
 
         LOG.debug("Calculating file changes");
         IndexChange changes = index.getChanges(old);
@@ -149,12 +168,17 @@ public class FileIndexCli {
         options.addOption("h", false, "Print this help");
         options.addOption("i", true, "Index file to store. Default is ~/.cache/filecache/<dirname>.index");
         options.addOption("q", false, "Quiet mode");
+        options.addOption(Option.builder("M")
+                .longOpt("verify-max-size")
+                .hasArg(true)
+                .desc("Limit content integrity verification by file size")
+                .build());
         return options;
     }
 
     public static void main(String[] args) {
         Options options = createOptions();
-        CommandLineParser parser = new PosixParser();
+        CommandLineParser parser = new DefaultParser();
         try {
             CommandLine cmd = parser.parse(options, args);
 
@@ -163,7 +187,7 @@ public class FileIndexCli {
             }
 
             new FileIndexCli(cmd).run();
-        } catch (IOException | ParseException e) {
+        } catch (IOException | ParseException | java.text.ParseException e) {
             LOG.error("Failed to run fileindex", e);
             System.err.println("Failed to run fileindex: " + e.getMessage());
         }
