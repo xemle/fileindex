@@ -1,7 +1,9 @@
 package de.silef.service.file;
 
-import de.silef.service.file.hash.HashUtil;
-import de.silef.service.file.index.*;
+import de.silef.service.file.index.FileIndex;
+import de.silef.service.file.index.FileIndexReader;
+import de.silef.service.file.index.FileIndexWriter;
+import de.silef.service.file.index.IndexChange;
 import de.silef.service.file.util.ByteUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,27 +33,27 @@ public class FileIndexCli {
 
         Path indexFile = dir.resolve(".fileindex");
 
-        LOG.info("Reading file index data from {}", dir.toAbsolutePath());
+        LOG.debug("Reading file index data from {}", dir.toAbsolutePath());
         FileIndex index = new FileIndex(dir);
         LOG.info("Found {} files of {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
 
         if (Files.exists(indexFile)) {
-            LOG.info("Reading existing file index from {}", indexFile);
+            LOG.debug("Reading existing file index from {}", indexFile);
             FileIndex old = new FileIndexReader().read(dir, indexFile);
 
-            LOG.info("Calculating file changes");
+            LOG.debug("Calculating file changes");
             IndexChange changes = index.getChanges(old);
 
-            LOG.info("Updating file index of {} files with {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+            LOG.info("Updating file index of {} files with {} by: ", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()), changes);
             index.updateChanges(changes, false);
-            LOG.info("Updated file index");
+            LOG.debug("Updated file index");
         } else {
             LOG.info("Creating file index. This might take some time!");
             index.initializeTreeHash();
-            LOG.info("File index created");
+            LOG.debug("File index created");
         }
 
-        LOG.info("Writing file index data to {} with {} file of {}", indexFile, index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+        LOG.debug("Writing file index data to {} with {} file of {}", indexFile, index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
         new FileIndexWriter().write(index, indexFile);
         LOG.info("Written file index data to {}. The index root hash is {}", indexFile, index.getRoot().getHash());
 

@@ -86,7 +86,7 @@ public class FileIndex {
     }
 
     public void updateChanges(IndexChange change, boolean suppressErrors) throws IOException {
-        LOG.info("Updating index with change: {}", change);
+        LOG.debug("Updating index with change: {}", change);
         new IndexUpdater(base, root).update(change, createHashUpdater(), suppressErrors);
     }
 

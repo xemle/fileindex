@@ -44,7 +44,6 @@ public class IndexUpdater {
     }
 
     private void updateAll(Collection<IndexNode> nodes, Consumer<IndexNode> fileUpdateConsumer, boolean suppressErrors) throws IOException {
-        LOG.info("Updating {} files", nodes.size());
         int updatedFiles = 0;
         long updatedBytes = 0;
         for (IndexNode node : nodes) {

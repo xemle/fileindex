@@ -37,7 +37,7 @@ public class FileIndexTest extends BasePathTest {
         index.initializeTreeHash();
 
 
-        verifyRootHash(index, "5f272ce58e6940e11994b8c8b47c5aab4faae5ee");
+        verifyRootHash(index, "3871e13db30feaef054f8073546ed8a8e63a9603");
     }
 
     private void verifyRootHash(FileIndex index, String hash) {
