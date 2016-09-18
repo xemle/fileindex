@@ -47,14 +47,14 @@ public class FileIndex {
     }
 
     private static IndexNode build(Path base, Predicate<Path> indexPathFilter) throws IOException {
-        IndexPathVisitor cacheVisitor = new IndexPathVisitor();
-        PathVisitor realPathVisitor = new RealPathVisitorFilter(base, cacheVisitor);
+        IndexPathVisitor nodeVisitor = new IndexPathVisitor();
+        PathVisitor realPathVisitor = new RealPathVisitorFilter(base, nodeVisitor);
         PathVisitor filterVisitor = new PathVisitorFilter(indexPathFilter, realPathVisitor);
         PathVisitor suppressErrorVisitor = new SuppressErrorPathVisitor(filterVisitor);
 
         PathWalker.walk(base, suppressErrorVisitor);
 
-        IndexNode root = cacheVisitor.getRoot();
+        IndexNode root = nodeVisitor.getRoot();
         calculateRootHash(root);
         return root;
     }
