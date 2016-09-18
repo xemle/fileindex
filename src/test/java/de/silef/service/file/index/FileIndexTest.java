@@ -18,18 +18,18 @@ public class FileIndexTest extends BasePathTest {
 
     @Test
     public void init() throws IOException {
-        Path base = PathUtils.getResourcePath("index");
+        Path base = PathUtils.getResourcePath("index/foo");
 
 
         FileIndex index = new FileIndex(base);
 
 
-        verifyRootHash(index, "91de5f07876f11efa1d354d99ebeaf7c8c52d516");
+        verifyRootHash(index, "ba6816c8376dfa4d39fce6c0b9256908f1b083c5");
     }
 
     @Test
     public void initializeTreeHash() throws IOException {
-        Path base = PathUtils.getResourcePath("index");
+        Path base = PathUtils.getResourcePath("index/foo");
 
         FileIndex index = new FileIndex(base);
 
@@ -37,7 +37,7 @@ public class FileIndexTest extends BasePathTest {
         index.initializeTreeHash();
 
 
-        verifyRootHash(index, "3871e13db30feaef054f8073546ed8a8e63a9603");
+        verifyRootHash(index, "186d88652af97d938f8d550478ffe1d60e074775");
     }
 
     private void verifyRootHash(FileIndex index, String hash) {

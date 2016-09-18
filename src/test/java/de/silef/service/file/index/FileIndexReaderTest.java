@@ -21,13 +21,13 @@ public class FileIndexReaderTest {
     @Test
     public void read() throws IOException {
         Path base = Paths.get(".");
-        Path file = PathUtils.getResourcePath("index/filecache");
+        Path file = PathUtils.getResourcePath("index/fileindex");
 
 
         FileIndex cache = new FileIndexReader().read(base, file);
 
 
         List<String> paths = cache.getRoot().stream().map(n -> n.getRelativePath().toString()).collect(Collectors.toList());
-        assertThat(paths, is(Arrays.asList("", "filecache", "foo", "foo/bar", "foo/bar/zoo.txt", "foo/doe.txt")));
+        assertThat(paths, is(Arrays.asList("", "bar", "bar/zoo.txt", "doe.txt")));
     }
 }

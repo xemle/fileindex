@@ -18,14 +18,14 @@ public class FileIndexWriterTest extends BasePathTest {
 
     @Test
     public void write() throws IOException {
-        Path base = PathUtils.getResourcePath("index");
+        Path base = PathUtils.getResourcePath("index/foo");
         FileIndex cache = new FileIndex(base);
 
 
-        new FileIndexWriter().write(cache, tmp.resolve("filecache"));
+        new FileIndexWriter().write(cache, tmp.resolve("fileindex"));
 
 
-        assertThat(Files.exists(tmp.resolve("filecache")), is(true));
+        assertThat(Files.exists(tmp.resolve("fileindex")), is(true));
     }
 
     @Test
@@ -33,7 +33,7 @@ public class FileIndexWriterTest extends BasePathTest {
         Path base = PathUtils.getResourcePath("index/foo");
         FileIndex cache = new FileIndex(base);
 
-        Path filecache = tmp.resolve("filecache");
+        Path filecache = tmp.resolve("fileindex");
         new FileIndexWriter().write(cache, filecache);
 
 
