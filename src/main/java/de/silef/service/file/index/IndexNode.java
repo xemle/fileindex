@@ -31,6 +31,8 @@ public class IndexNode implements Serializable {
 
     private String name;
 
+    private Path relativePath = null;
+
     private FileMode mode;
 
     private long size;
@@ -252,10 +254,10 @@ public class IndexNode implements Serializable {
     }
 
     public Path getRelativePath() {
-        if (parent == null) {
-            return Paths.get("");
+        if (relativePath == null) {
+            relativePath = parent == null ? Paths.get("") : parent.getRelativePath().resolve(name);
         }
-        return parent.getRelativePath().resolve(name);
+        return relativePath;
     }
 
     public void resetHashesToRootNode() {
