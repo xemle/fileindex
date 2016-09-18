@@ -32,6 +32,8 @@ depth first order.
     +----------------+
     |    8 bytes     |  inode value or 0
     |                |
+    +----------------+
+    |   20 bytes     |  Hash value
     +--------+-------+
     | 2 bytes|       |  Length and name in UTF-8
     +--------+       +

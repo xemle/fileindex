@@ -37,6 +37,7 @@ public class FileMetaCacheWriter {
         output.writeLong(node.getCreationTime());
         output.writeLong(node.getModifiedTime());
         output.writeLong(node.getInode());
+        output.write(node.getHash().getBytes());
 
         output.writeUTF(node.getName().toString());
 

@@ -1,5 +1,7 @@
 package de.silef.service.file.meta;
 
+import de.silef.service.file.hash.FileHash;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
@@ -30,7 +32,9 @@ public class FileMetaNode implements Serializable {
 
     private long inode;
 
-    public FileMetaNode(FileMetaNode parent, FileMode mode, long size, long creationTime, long modifiedTime, long inode, Path name) {
+    private FileHash hash = FileHash.ZERO;
+
+    public FileMetaNode(FileMetaNode parent, FileMode mode, long size, long creationTime, long modifiedTime, long inode, Path name, FileHash hash) {
         setParent(parent);
         this.mode = mode;
         this.size = size;
@@ -38,6 +42,7 @@ public class FileMetaNode implements Serializable {
         this.modifiedTime = modifiedTime;
         this.inode = inode;
         this.name = name;
+        this.hash = hash;
     }
 
     private void addChild(FileMetaNode node) {
@@ -120,6 +125,10 @@ public class FileMetaNode implements Serializable {
 
     public long getInode() {
         return inode;
+    }
+
+    public FileHash getHash() {
+        return hash;
     }
 
     @Override
