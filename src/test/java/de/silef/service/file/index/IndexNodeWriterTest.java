@@ -9,20 +9,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileIndexWriterTest extends BasePathTest {
+public class IndexNodeWriterTest extends BasePathTest {
 
     @Test
     public void write() throws IOException {
         Path base = PathUtils.getResourcePath("index/foo");
-        FileIndex cache = new FileIndex(base);
+        FileIndex index = new FileIndex(base);
 
 
-        new FileIndexWriter().write(cache, tmp.resolve("fileindex"));
+        new IndexNodeWriter().write(index.getRoot(), tmp.resolve("fileindex"));
 
 
         assertThat(Files.exists(tmp.resolve("fileindex")), is(true));
@@ -33,13 +33,14 @@ public class FileIndexWriterTest extends BasePathTest {
         Path base = PathUtils.getResourcePath("index/foo");
         FileIndex cache = new FileIndex(base);
 
-        Path filecache = tmp.resolve("fileindex");
-        new FileIndexWriter().write(cache, filecache);
+        Path fileindex = tmp.resolve("fileindex");
+        new IndexNodeWriter().write(cache.getRoot(), fileindex);
 
 
-        FileIndex readCache = new FileIndexReader().read(base, filecache);
+        IndexNode root = new IndexNodeReader().read(base, fileindex);
 
 
-        assertThat(readCache.getChanges(cache).hasChanges(), is(false));
+        FileIndex index = new FileIndex(base, root);
+        assertThat(index.getChanges(cache).hasChanges(), is(false));
     }
 }

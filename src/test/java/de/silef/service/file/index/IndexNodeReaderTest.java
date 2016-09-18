@@ -11,12 +11,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileIndexReaderTest {
+public class IndexNodeReaderTest {
 
     @Test
     public void read() throws IOException {
@@ -24,10 +24,10 @@ public class FileIndexReaderTest {
         Path file = PathUtils.getResourcePath("index/fileindex");
 
 
-        FileIndex cache = new FileIndexReader().read(base, file);
+        IndexNode root = new IndexNodeReader().read(base, file);
 
 
-        List<String> paths = cache.getRoot().stream().map(n -> n.getRelativePath().toString()).collect(Collectors.toList());
+        List<String> paths = root.stream().map(n -> n.getRelativePath().toString()).collect(Collectors.toList());
         assertThat(paths, is(Arrays.asList("", "bar", "bar/zoo.txt", "doe.txt")));
     }
 }

@@ -11,27 +11,27 @@ import static de.silef.service.file.index.IndexNode.MAGIC_HEADER;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileIndexReader {
+public class IndexNodeReader {
 
-    public FileIndex read(Path base, Path file) throws IOException {
+    public IndexNode read(Path base, Path file) throws IOException {
         return read(base, file, false);
     }
 
-    public FileIndex read(Path base, Path file, boolean suppressWarning) throws IOException {
+    public IndexNode read(Path base, Path file, boolean suppressWarning) throws IOException {
         try {
             try (InputStream input = new FileInputStream(file.toFile())) {
-                return read(base, input);
+                return read(input);
             }
         } catch (IOException e) {
             if (suppressWarning) {
-                return new FileIndex(base, IndexNode.createRootFromPath(base));
+                return IndexNode.createRootFromPath(base);
             } else {
                 throw e;
             }
         }
     }
 
-    private FileIndex read(Path base, InputStream input) throws IOException {
+    private IndexNode read(InputStream input) throws IOException {
         try (InflaterInputStream inflaterInput = new InflaterInputStream(input);
              BufferedInputStream bufferedInput = new BufferedInputStream(inflaterInput);
              DataInputStream dataInput = new DataInputStream(bufferedInput)) {
@@ -40,8 +40,7 @@ public class FileIndexReader {
             if (header != MAGIC_HEADER) {
                 throw new IOException("Unexpected header: " + header);
             }
-            IndexNode root = readNode(null, dataInput);
-            return new FileIndex(base, root);
+            return readNode(null, dataInput);
         } catch (ClassNotFoundException | ClassCastException e) {
             throw new IOException("Could not read cache nodes", e);
         }

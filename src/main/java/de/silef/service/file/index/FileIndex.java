@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -22,19 +23,34 @@ public class FileIndex {
 
     private IndexNode root;
 
+    private Predicate<Path> indexPathFilter;
+
+    private Predicate<IndexNode> hashNodeFilter;
+
     public FileIndex(Path base) throws IOException {
-        this(base, build(base));
+        this(base, p -> true, n -> true);
+    }
+
+    public FileIndex(Path base, Predicate<Path> indexPathFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
+        this(base, build(base, indexPathFilter), indexPathFilter, hashNodeFilter);
     }
 
     public FileIndex(Path base, IndexNode root) {
-        this.base = base;
-        this.root = root;
+        this(base, root, p -> true, n -> true);
     }
 
-    private static IndexNode build(Path base) throws IOException {
+    public FileIndex(Path base, IndexNode root, Predicate<Path> indexPathFilter, Predicate<IndexNode> hashNodeFilter) {
+        this.base = base;
+        this.root = root;
+        this.indexPathFilter = indexPathFilter;
+        this.hashNodeFilter = hashNodeFilter;
+    }
+
+    private static IndexNode build(Path base, Predicate<Path> indexPathFilter) throws IOException {
         IndexPathVisitor cacheVisitor = new IndexPathVisitor();
         PathVisitor realPathVisitor = new RealPathVisitorFilter(base, cacheVisitor);
-        PathVisitor suppressErrorVisitor = new SuppressErrorPathVisitor(realPathVisitor);
+        PathVisitor filterVisitor = new PathVisitorFilter(indexPathFilter, realPathVisitor);
+        PathVisitor suppressErrorVisitor = new SuppressErrorPathVisitor(filterVisitor);
 
         PathWalker.walk(base, suppressErrorVisitor);
 
@@ -62,7 +78,7 @@ public class FileIndex {
     }
 
     public IndexChange getChanges() throws IOException {
-        return getChanges(new FileIndex(base));
+        return getChanges(new FileIndex(base, indexPathFilter, hashNodeFilter));
     }
 
     public long getTotalFileSize() {
@@ -92,6 +108,9 @@ public class FileIndex {
 
     private Consumer<IndexNode> createHashUpdater() {
         return node -> {
+                if (!hashNodeFilter.test(node)) {
+                    return;
+                }
                 Path file = base.resolve(node.getRelativePath());
                 if (!Files.isRegularFile(file)) {
                     return;

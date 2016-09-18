@@ -10,20 +10,18 @@ import static de.silef.service.file.index.IndexNode.MAGIC_HEADER;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileIndexWriter {
+public class IndexNodeWriter {
 
-    public void write(FileIndex cache, Path path) throws IOException {
+    public void write(IndexNode root, Path path) throws IOException {
         try (FileOutputStream output = new FileOutputStream(path.toFile())) {
-            write(cache, output);
+            write(root, output);
         }
     }
 
-    public void write(FileIndex cache, OutputStream output) throws IOException {
+    public void write(IndexNode root, OutputStream output) throws IOException {
         try (DeflaterOutputStream deflaterOutput = new DeflaterOutputStream(output);
              BufferedOutputStream bufferedOutput = new BufferedOutputStream(deflaterOutput);
              DataOutputStream dataOutput = new DataOutputStream(bufferedOutput)) {
-
-            IndexNode root = cache.getRoot();
 
             dataOutput.writeInt(MAGIC_HEADER);
             writeNode(root, dataOutput);

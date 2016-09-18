@@ -37,34 +37,59 @@ public class FileIndexCli {
         LOG.info("Found {} files of {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
 
         int exitCode = 0;
+        boolean writeIndex = false;
 
         if (Files.exists(indexFile)) {
-            LOG.debug("Reading existing file index from {}", indexFile);
-            FileIndex old = new FileIndexReader().read(base, indexFile);
+            IndexChange changes = getIndexChanges(base, indexFile, index);
 
-            LOG.debug("Calculating file changes");
-            IndexChange changes = index.getChanges(old);
+            if (changes.hasChanges()) {
+                exitCode = 1;
+                writeIndex = true;
 
-            if (!cmd.hasOption("q")) {
-                printChange(changes);
+                updateIndex(index, changes);
             }
-
-            exitCode = changes.hasChanges() ? 1 : 0;
-
-            LOG.info("Updating file index of {} files with {} by: ", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()), changes);
-            index.updateChanges(changes, false);
-            LOG.debug("Updated file index");
         } else {
-            LOG.info("Creating file index. This might take some time!");
-            index.initializeTreeHash();
-            LOG.debug("File index created");
+            initializeIndex(index);
+            writeIndex = true;
         }
 
-        LOG.debug("Writing file index data to {} with {} file of {}", indexFile, index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
-        new FileIndexWriter().write(index, indexFile);
-        LOG.info("Written file index data to {}. The index root hash is {}", indexFile, index.getRoot().getHash());
+        if (writeIndex) {
+            writeIndex(indexFile, index);
+        }
 
         System.exit(exitCode);
+    }
+
+    private void writeIndex(Path indexFile, FileIndex index) throws IOException {
+        LOG.debug("Writing file index data to {} with {} file of {}", indexFile, index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+        new IndexNodeWriter().write(index.getRoot(), indexFile);
+        LOG.info("Written file index data to {}. The index root hash is {}", indexFile, index.getRoot().getHash());
+    }
+
+    private void initializeIndex(FileIndex index) throws IOException {
+        LOG.info("Creating file index. This might take some time!");
+        index.initializeTreeHash();
+        LOG.debug("File index created");
+    }
+
+    private void updateIndex(FileIndex index, IndexChange changes) throws IOException {
+        LOG.info("Updating file index of {} files with {} by: ", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()), changes);
+        index.updateChanges(changes, false);
+        LOG.debug("Updated file index");
+    }
+
+    private IndexChange getIndexChanges(Path base, Path indexFile, FileIndex index) throws IOException {
+        LOG.debug("Reading existing file index from {}", indexFile);
+        IndexNode root = new IndexNodeReader().read(base, indexFile);
+        FileIndex old = new FileIndex(base, root);
+
+        LOG.debug("Calculating file changes");
+        IndexChange changes = index.getChanges(old);
+
+        if (!cmd.hasOption("q")) {
+            printChange(changes);
+        }
+        return changes;
     }
 
     private Path getIndexFile(Path base) throws IOException {
