@@ -2,10 +2,8 @@ package de.silef.service.file.index;
 
 import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.hash.HashUtil;
-import de.silef.service.file.test.BasePathTest;
 import de.silef.service.file.test.PathUtils;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -32,7 +30,7 @@ public class IndexNodeTest {
 
     @Test
     public void createFromPathOfFile() throws IOException {
-        Path file = PathUtils.getResourcePath("meta/foo/doe.txt");
+        Path file = PathUtils.getResourcePath("index/foo/doe.txt");
         IndexNode rootMock = Mockito.mock(IndexNode.class);
 
 
@@ -55,7 +53,7 @@ public class IndexNodeTest {
 
     @Test
     public void createFromPathOfDir() throws IOException {
-        Path file = PathUtils.getResourcePath("meta/foo");
+        Path file = PathUtils.getResourcePath("index/foo");
 
 
         IndexNode node = IndexNode.createRootFromPath(file);
@@ -77,7 +75,7 @@ public class IndexNodeTest {
 
     @Test
     public void createFromPathShouldUpdateParent() throws IOException {
-        Path file = PathUtils.getResourcePath("meta/foo/doe.txt");
+        Path file = PathUtils.getResourcePath("index/foo/doe.txt");
         IndexNode parentMock = Mockito.mock(IndexNode.class);
 
 
@@ -118,21 +116,21 @@ public class IndexNodeTest {
 
     @Test
     public void getRelativePathShouldCallParent() throws IOException {
-        Path file = PathUtils.getResourcePath("meta/foo/doe.txt");
+        Path file = PathUtils.getResourcePath("index/foo/doe.txt");
         IndexNode parentMock = Mockito.mock(IndexNode.class);
-        when(parentMock.getRelativePath()).thenReturn(Paths.get("meta/bar"));
+        when(parentMock.getRelativePath()).thenReturn(Paths.get("index/bar"));
         IndexNode node = IndexNode.createFromPath(parentMock, file);
 
 
         Path path = node.getRelativePath();
 
 
-        assertThat(path, is(Paths.get("meta/bar/doe.txt")));
+        assertThat(path, is(Paths.get("index/bar/doe.txt")));
     }
 
     @Test
     public void resetHashesToRootNodeCallsParent() throws IOException {
-        Path base = PathUtils.getResourcePath("meta");
+        Path base = PathUtils.getResourcePath("index");
         IndexNode parentMock = Mockito.mock(IndexNode.class);
 
         IndexNode node = IndexNode.createFromPath(parentMock, base);
@@ -146,7 +144,7 @@ public class IndexNodeTest {
 
     @Test
     public void resetHashesToRootNodeRecalculatesHash() throws IOException {
-        Path base = PathUtils.getResourcePath("meta");
+        Path base = PathUtils.getResourcePath("index");
 
         IndexNode childMock = Mockito.mock(IndexNode.class);
         when(childMock.getHash()).thenReturn(new FileHash("12345678901234567890".getBytes()));
@@ -166,7 +164,7 @@ public class IndexNodeTest {
 
     @Test
     public void addChildShouldSortNames() throws IOException {
-        Path base = PathUtils.getResourcePath("meta");
+        Path base = PathUtils.getResourcePath("index");
 
         IndexNode root = IndexNode.createRootFromPath(base);
         givenChildrenNames(root, "foo.txt", "bar.txt", "readme.md", "doe.file");
@@ -180,7 +178,7 @@ public class IndexNodeTest {
 
     @Test
     public void addChildShouldRemoveChildWithSameName() throws IOException {
-        Path base = PathUtils.getResourcePath("meta");
+        Path base = PathUtils.getResourcePath("index");
 
         IndexNode root = IndexNode.createRootFromPath(base);
         givenChildrenNames(root, "foo.txt", "buz.txt", "readme.md", "doe.file");
@@ -199,7 +197,7 @@ public class IndexNodeTest {
 
     @Test
     public void findChildByName() throws IOException {
-        Path base = PathUtils.getResourcePath("meta");
+        Path base = PathUtils.getResourcePath("index");
 
         IndexNode root = IndexNode.createRootFromPath(base);
         givenChildrenNames(root, "foo.txt", "bar.txt", "readme.md");

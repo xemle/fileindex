@@ -18,7 +18,7 @@ public class FileIndexWriterTest extends BasePathTest {
 
     @Test
     public void write() throws IOException {
-        Path base = PathUtils.getResourcePath("meta");
+        Path base = PathUtils.getResourcePath("index");
         FileIndex cache = new FileIndex(base);
 
 
@@ -30,7 +30,7 @@ public class FileIndexWriterTest extends BasePathTest {
 
     @Test
     public void writeShouldBeReadable() throws IOException {
-        Path base = PathUtils.getResourcePath("meta/foo");
+        Path base = PathUtils.getResourcePath("index/foo");
         FileIndex cache = new FileIndex(base);
 
         Path filecache = tmp.resolve("filecache");

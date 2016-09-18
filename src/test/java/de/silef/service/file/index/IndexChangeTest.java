@@ -20,7 +20,7 @@ public class IndexChangeTest extends BasePathTest {
 
     @Test
     public void getChangeShouldHaveNewFile() throws IOException {
-        PathUtils.copy(PathUtils.getResourcePath("meta/foo"), tmp);
+        PathUtils.copy(PathUtils.getResourcePath("index/foo"), tmp);
         FileIndex old = new FileIndex(tmp);
         Files.write(tmp.resolve("new.txt"), "content".getBytes());
 
@@ -39,7 +39,7 @@ public class IndexChangeTest extends BasePathTest {
 
     @Test
     public void getChangeShouldHaveModifiedFile() throws IOException {
-        PathUtils.copy(PathUtils.getResourcePath("meta/foo"), tmp);
+        PathUtils.copy(PathUtils.getResourcePath("index/foo"), tmp);
         FileIndex old = new FileIndex(tmp);
         Files.write(tmp.resolve("doe.txt"), "content".getBytes());
 
@@ -58,7 +58,7 @@ public class IndexChangeTest extends BasePathTest {
 
     @Test
     public void getChangeShouldHaveRemovedFile() throws IOException {
-        PathUtils.copy(PathUtils.getResourcePath("meta/foo"), tmp);
+        PathUtils.copy(PathUtils.getResourcePath("index/foo"), tmp);
         FileIndex old = new FileIndex(tmp);
         Files.delete(tmp.resolve("doe.txt"));
 

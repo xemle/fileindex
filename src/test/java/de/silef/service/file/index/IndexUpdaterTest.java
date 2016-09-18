@@ -7,7 +7,6 @@ import de.silef.service.file.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,7 +30,7 @@ public class IndexUpdaterTest extends BasePathTest {
     @Before
     public void setUp() throws IOException {
         super.setUp();
-        PathUtils.copy(PathUtils.getResourcePath("meta"), tmp);
+        PathUtils.copy(PathUtils.getResourcePath("index"), tmp);
 
         index = new FileIndex(tmp);
         index.initializeTreeHash();

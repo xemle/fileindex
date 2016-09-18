@@ -8,7 +8,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.core.Is.is;
@@ -22,7 +21,7 @@ public class FileIndexReaderTest {
     @Test
     public void read() throws IOException {
         Path base = Paths.get(".");
-        Path file = PathUtils.getResourcePath("meta/filecache");
+        Path file = PathUtils.getResourcePath("index/filecache");
 
 
         FileIndex cache = new FileIndexReader().read(base, file);

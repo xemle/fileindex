@@ -18,7 +18,7 @@ public class FileIndexTest extends BasePathTest {
 
     @Test
     public void init() throws IOException {
-        Path base = PathUtils.getResourcePath("meta");
+        Path base = PathUtils.getResourcePath("index");
 
 
         FileIndex index = new FileIndex(base);
@@ -29,7 +29,7 @@ public class FileIndexTest extends BasePathTest {
 
     @Test
     public void initializeTreeHash() throws IOException {
-        Path base = PathUtils.getResourcePath("meta");
+        Path base = PathUtils.getResourcePath("index");
 
         FileIndex index = new FileIndex(base);
 
