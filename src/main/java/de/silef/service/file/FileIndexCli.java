@@ -3,7 +3,6 @@ package de.silef.service.file;
 import de.silef.service.file.index.*;
 import de.silef.service.file.util.ByteUtil;
 import org.apache.commons.cli.*;
-import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,21 +61,26 @@ public class FileIndexCli {
     }
 
     private Predicate<IndexNode> getHashNodeFilter() throws java.text.ParseException {
-        Predicate<IndexNode> filter = node -> true;
-        if (cmd.hasOption('M')) {
-            long maxSize = ByteUtil.toByte(cmd.getOptionValue('M'));
-            filter = node -> {
-                if (node.getSize() > maxSize) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("File exceeds verification size of {}: {} with {}", ByteUtil.toHumanSize(maxSize), node.getRelativePath(), ByteUtil.toHumanSize(node.getSize()));
-                    }
-                    return false;
-                }
-                return true;
-            };
-            LOG.info("Limit content integrity verification to {} ({} bytes)", ByteUtil.toHumanSize(maxSize), maxSize);
+        if (!cmd.hasOption('M')) {
+            return node -> true;
         }
-        return filter;
+
+        long maxSize = ByteUtil.toByte(cmd.getOptionValue('M'));
+        if (maxSize == 0) {
+            LOG.info("Disable content integrity verification", ByteUtil.toHumanSize(maxSize), maxSize);
+            return node -> false;
+        }
+
+        LOG.info("Limit content integrity verification to {} ({} bytes)", ByteUtil.toHumanSize(maxSize), maxSize);
+        return node -> {
+            if (node.getSize() > maxSize) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("File exceeds verification size of {}: {} with {}", ByteUtil.toHumanSize(maxSize), node.getRelativePath(), ByteUtil.toHumanSize(node.getSize()));
+                }
+                return false;
+            }
+            return true;
+        };
     }
 
     private void writeIndex(FileIndex index, Path indexFile) throws IOException {
