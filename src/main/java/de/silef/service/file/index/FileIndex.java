@@ -102,7 +102,7 @@ public class FileIndex {
         }
 
         String name = names.remove(0);
-        IndexNode child = node.findChildren(name);
+        IndexNode child = node.findChild(name);
         List<IndexNode> children = node.getChildren();
         children.remove(child);
 
@@ -134,7 +134,7 @@ public class FileIndex {
             throw new IllegalArgumentException("node must be an directory");
         }
         String name = names.remove(0);
-        IndexNode child = node.findChildren(name);
+        IndexNode child = node.findChild(name);
         List<IndexNode> children = node.getChildren();
         children.remove(child);
 

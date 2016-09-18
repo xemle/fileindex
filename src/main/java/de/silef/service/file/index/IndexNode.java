@@ -89,7 +89,7 @@ public class IndexNode {
         return children;
     }
 
-    IndexNode findChildren(String name) {
+    IndexNode findChild(String name) {
         for (IndexNode child : children) {
             if (child.getName().equals(name)) {
                 return child;
