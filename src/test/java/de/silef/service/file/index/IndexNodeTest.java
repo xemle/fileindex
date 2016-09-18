@@ -163,20 +163,6 @@ public class IndexNodeTest {
     }
 
     @Test
-    public void addChildShouldSortNames() throws IOException {
-        Path base = PathUtils.getResourcePath("index");
-
-        IndexNode root = IndexNode.createRootFromPath(base);
-        givenChildrenNames(root, "foo.txt", "bar.txt", "readme.md", "doe.file");
-
-
-        List<String> names = root.getChildren().stream().map(IndexNode::getName).collect(Collectors.toList());
-
-
-        assertThat(names, is(Arrays.asList("bar.txt", "doe.file", "foo.txt", "readme.md")));
-    }
-
-    @Test
     public void addChildShouldRemoveChildWithSameName() throws IOException {
         Path base = PathUtils.getResourcePath("index");
 
@@ -191,7 +177,7 @@ public class IndexNodeTest {
 
         assertThat(result, is(childMock));
 
-        List<String> names = root.getChildren().stream().map(IndexNode::getName).collect(Collectors.toList());
+        List<String> names = root.getChildren().stream().map(IndexNode::getName).sorted().collect(Collectors.toList());
         assertThat(names, is(Arrays.asList("buz.txt", "doe.file", "foo.txt", "readme.md")));
     }
 

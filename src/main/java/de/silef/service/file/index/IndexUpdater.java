@@ -85,21 +85,36 @@ public class IndexUpdater {
         String name = names.remove(0);
 
         Path file = base.resolve(node.getRelativePath()).resolve(name);
+        IndexNode child = node.findChildByName(name);
         if (names.isEmpty()) {
-            node.removeChildByName(name);
-            IndexNode child = IndexNode.createFromPath(node, file);
-            node.addChild(child);
-            fileUpdateConsumer.accept(child);
-            node.resetHashesToRootNode();
-        } else {
-            IndexNode child = node.findChildByName(name);
-            if (child == null) {
-                child = IndexNode.createFromPath(node, file);
-                node.addChild(child);
-                node.resetHashesToRootNode();
-            }
-            insertNode(child, names, fileUpdateConsumer);
+            insertLeaf(node, child, name, file, fileUpdateConsumer);
+            return;
         }
+
+        if (child == null) {
+            child = IndexNode.createFromPath(node, file);
+            node.addChild(child);
+            node.resetHashesToRootNode();
+        }
+        insertNode(child, names, fileUpdateConsumer);
+    }
+
+    private void insertLeaf(IndexNode parent, IndexNode existingNode, String name, Path file, Consumer<IndexNode> fileUpdateConsumer) throws IOException {
+        IndexNode updatedNode = IndexNode.createFromPath(parent, file);
+
+        if (canCopyNode(existingNode, updatedNode)) {
+            existingNode.copyFrom(updatedNode);
+            updatedNode = existingNode;
+        } else {
+            parent.removeChildByName(name);
+            parent.addChild(updatedNode);
+        }
+        fileUpdateConsumer.accept(updatedNode);
+        parent.resetHashesToRootNode();
+    }
+
+    private boolean canCopyNode(IndexNode existingChild, IndexNode updatedChild) {
+        return existingChild != null && existingChild.getMode().sameFileType(updatedChild.getMode());
     }
 
     private void removeAll(Collection<IndexNode> nodes) {

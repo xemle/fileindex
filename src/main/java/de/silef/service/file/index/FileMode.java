@@ -1,5 +1,7 @@
 package de.silef.service.file.index;
 
+import com.sun.org.apache.bcel.internal.generic.FMUL;
+
 /**
  * See man 2 stat for description
  *
@@ -31,5 +33,9 @@ public enum FileMode {
         } else {
             return OTHER;
         }
+    }
+
+    boolean sameFileType(FileMode other) {
+        return value != OTHER.value && value == other.value;
     }
 }

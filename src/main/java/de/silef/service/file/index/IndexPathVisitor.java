@@ -17,7 +17,7 @@ public class IndexPathVisitor extends PathVisitor {
 
     private List<IndexNode> parentStack;
 
-    private Map<IndexNode, List<IndexNode>> parentToChildren = new HashMap<>();
+    private Map<Path, List<IndexNode>> pathToChildren = new HashMap<>();
 
     private IndexNode lastDirNode;
 
@@ -38,15 +38,15 @@ public class IndexPathVisitor extends PathVisitor {
         IndexNode node;
         if (parentStack.isEmpty()) {
             node = IndexNode.createRootFromPath(path);
-            parentToChildren.put(node, new ArrayList<>());
+            pathToChildren.put(path, new ArrayList<>());
         } else {
             IndexNode parent = parentStack.get(parentStack.size() - 1);
             node = IndexNode.createFromPath(parent, path);
-            parentToChildren.get(parent).add(node);
+            pathToChildren.get(path.getParent()).add(node);
         }
 
         parentStack.add(node);
-        parentToChildren.put(node, new ArrayList<>());
+        pathToChildren.put(path, new ArrayList<>());
         return super.preVisitDirectory(path);
     }
 
@@ -55,7 +55,7 @@ public class IndexPathVisitor extends PathVisitor {
         if (Files.isReadable(path)) {
             IndexNode parent = parentStack.get(parentStack.size() - 1);
             IndexNode child = IndexNode.createFromPath(parent, path);
-            parentToChildren.get(parent).add(child);
+            pathToChildren.get(path.getParent()).add(child);
         }
         return super.visitFile(path);
     }
@@ -63,7 +63,7 @@ public class IndexPathVisitor extends PathVisitor {
     @Override
     public VisitorResult postVisitDirectory(Path dir) throws IOException {
         lastDirNode = parentStack.remove(parentStack.size() - 1);
-        List<IndexNode> children = parentToChildren.remove(lastDirNode);
+        List<IndexNode> children = pathToChildren.remove(dir);
         lastDirNode.setChildren(children);
         return super.postVisitDirectory(dir);
     }

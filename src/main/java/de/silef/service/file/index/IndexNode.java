@@ -12,8 +12,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -26,6 +27,7 @@ public class IndexNode implements Serializable {
 
     private IndexNode parent = null;
     private List<IndexNode> children = new ArrayList<>();
+    private Map<String, IndexNode> nameToChild = new HashMap<>();
 
     private String name;
 
@@ -54,7 +56,6 @@ public class IndexNode implements Serializable {
         node.inode = inode;
         node.name = name;
         node.hash = hash;
-        node.children = new ArrayList<>();
         node.parent = parent;
 
         return node;
@@ -177,6 +178,7 @@ public class IndexNode implements Serializable {
         try (ByteArrayOutputStream buffer = new ByteArrayOutputStream();
              DataOutputStream dataOutput = new DataOutputStream(buffer);) {
 
+            sortChildren();
             for (IndexNode child : children) {
                 dataOutput.write(child.getHash().getBytes());
                 dataOutput.write(child.getMode().getValue());
@@ -222,59 +224,27 @@ public class IndexNode implements Serializable {
     }
 
     void addChild(IndexNode node) {
-        removeChildByName(node.getName());
+        IndexNode oldNode = nameToChild.put(node.getName(), node);
+        children.remove(oldNode);
         children.add(node);
-        sortChildren();
     }
 
     void setChildren(List<IndexNode> children) {
         this.children = new ArrayList<>(children);
-        sortChildren();
+        nameToChild = new HashMap<>();
+        for (IndexNode node : children) {
+            nameToChild.put(node.getName(), node);
+        }
     }
 
     public IndexNode removeChildByName(String name) {
-        if (children.isEmpty()) {
-            return null;
-        }
-
-        int index = findChildIndexByName(name);
-        if (index < 0) {
-            return null;
-        }
-
-        IndexNode node = children.remove(index);
-        sortChildren();
+        IndexNode node = findChildByName(name);
+        children.remove(node);
         return node;
     }
 
     public IndexNode findChildByName(String name) {
-        int index = findChildIndexByName(name);
-        if (index < 0) {
-            return null;
-        }
-        return children.get(index);
-    }
-
-    private int findChildIndexByName(String name) {
-        return findChildIndexByName(name, 0, children.size() - 1);
-    }
-
-    private int findChildIndexByName(String name, int low, int high) {
-        if (low > high) {
-            return -1;
-        }
-        int i = low + (high - low);
-
-        IndexNode node = children.get(i);
-        assert node != null : "Child at " + i + " is null";
-        int cmp = node.getName().compareTo(name);
-
-        if (cmp > 0) {
-            return findChildIndexByName(name, low, i - 1);
-        } else if (cmp < 0) {
-            return findChildIndexByName(name, i + 1, high);
-        }
-        return i;
+        return nameToChild.get(name);
     }
 
     private void sortChildren() {
@@ -314,4 +284,15 @@ public class IndexNode implements Serializable {
         return builder.build();
     }
 
+    public void copyFrom(IndexNode other) {
+        name = other.getName();
+
+        mode = other.getMode();
+        size = other.getSize();
+        creationTime = other.getCreationTime();
+        modifiedTime = other.getModifiedTime();
+
+        inode = other.getInode();
+        hash = other.getHash();
+    }
 }
