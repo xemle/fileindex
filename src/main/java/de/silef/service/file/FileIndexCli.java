@@ -13,6 +13,8 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -36,21 +38,49 @@ public class FileIndexCli {
         Predicate<Path> pathIndexFilter = p -> true;
         Predicate<IndexNode> hashNodeFilter = getHashNodeFilter();
 
+        final AtomicBoolean done = new AtomicBoolean(false);
+
         FileIndex index = readIndexMetaData(base, pathIndexFilter, hashNodeFilter);
 
         if (!Files.exists(indexFile)) {
+            addShutdownHook(done, () -> {
+                writeIndex(index, indexFile);
+                return null;
+            });
             initializeIndex(index);
             writeIndex(index, indexFile);
+            done.set(true);
             System.out.println("File index successfully created");
         } else {
             IndexChange changes = getIndexChanges(base, pathIndexFilter, hashNodeFilter, indexFile, index);
 
             if (changes.hasChanges()) {
+                addShutdownHook(done, () -> {
+                    writeIndex(index, indexFile);
+                    return null;
+                });
                 updateIndex(index, changes);
                 writeIndex(index, indexFile);
+                done.set(true);
                 System.exit(1);
             }
         }
+    }
+
+    private void addShutdownHook(AtomicBoolean done, Callable<Void> hook) {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                try {
+                    if (!done.get()) {
+                        System.out.print("Interrupted. Cleaning up... ");
+                        hook.call();
+                        System.out.println("Done");
+                    }
+                } catch (Exception e) {
+                    LOG.error("Could not execute shutdown hook");
+                }
+            };
+        });
     }
 
     private FileIndex readIndexMetaData(Path base, Predicate<Path> pathIndexFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
