@@ -3,7 +3,10 @@ package de.silef.service.file.index;
 import de.silef.service.file.util.ByteUtil;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -70,15 +73,15 @@ public class IndexChange {
         return base;
     }
 
-    public Collection<IndexNode> getCreated() {
+    public Set<IndexNode> getCreated() {
         return created;
     }
 
-    public Collection<IndexNode> getModified() {
+    public Set<IndexNode> getModified() {
         return modified;
     }
 
-    public Collection<IndexNode> getRemoved() {
+    public Set<IndexNode> getRemoved() {
         return removed;
     }
 

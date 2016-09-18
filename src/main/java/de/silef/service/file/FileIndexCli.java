@@ -1,5 +1,6 @@
 package de.silef.service.file;
 
+import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.index.*;
 import de.silef.service.file.util.ByteUtil;
 import org.apache.commons.cli.*;
@@ -10,9 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
@@ -139,10 +138,20 @@ public class FileIndexCli {
         LOG.debug("Calculating file changes");
         IndexChange changes = index.getChanges(old);
 
+        // Add all empty hashes to the modified change to resume hash calculation
+        Set<IndexNode> emptyHashes = index.getRoot().stream()
+                .filter(n -> n.getMode() == FileMode.FILE)
+                .filter(n -> n.getHash().equals(FileHash.ZERO))
+                .collect(Collectors.toSet());
+        LOG.info("Add {} files to resume integrity check", emptyHashes.size());
+        emptyHashes.addAll(changes.getModified());
+
+        IndexChange resumeChange = new IndexChange(changes.getBase(), new HashSet<>(changes.getCreated()), emptyHashes, changes.getRemoved());
+
         if (!cmd.hasOption("q")) {
-            printChange(changes);
+            printChange(resumeChange);
         }
-        return changes;
+        return resumeChange;
     }
 
     private Path getIndexFile(Path base) throws IOException {
