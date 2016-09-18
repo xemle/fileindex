@@ -16,7 +16,7 @@ File Index Cache runs with Java 8 and is build with Maven
 
 ## File Format
 
-See [file-index.md](tree/master/src/doc/file-index.md) in `src/doc` for details.
+See [file-index.md](src/doc/file-index.md) in `src/doc` for details.
 
 ## Licence
 
