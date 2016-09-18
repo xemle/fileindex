@@ -12,7 +12,11 @@ The file index is read and written in the given path in the `.fileindex` file.
 
 ## Requirements
 
-File Index Cache runts with Java 8 and is build with Maven
+File Index Cache runs with Java 8 and is build with Maven
+
+## File Format
+
+See [file-index.md](tree/master/src/doc/file-index.md) in `src/doc` for details.
 
 ## Licence
 
