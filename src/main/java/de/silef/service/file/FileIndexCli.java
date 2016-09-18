@@ -22,19 +22,21 @@ public class FileIndexCli {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileIndexCli.class);
 
-    private Path base;
+    private CommandLine cmd;
 
-    private Path indexFile;
-
-    public FileIndexCli(Path base, Path indexFile) {
-        this.base = base;
-        this.indexFile = indexFile;
+    public FileIndexCli(CommandLine cmd) {
+        this.cmd = cmd;
     }
 
-    public void run() throws IOException {
+    private void run() throws IOException {
+        Path base = getBase();
+        Path indexFile = getIndexFile(base);
+
         LOG.debug("Reading file index data from {}", base.toAbsolutePath());
         FileIndex index = new FileIndex(base);
         LOG.info("Found {} files of {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+
+        int exitCode = 0;
 
         if (Files.exists(indexFile)) {
             LOG.debug("Reading existing file index from {}", indexFile);
@@ -43,7 +45,11 @@ public class FileIndexCli {
             LOG.debug("Calculating file changes");
             IndexChange changes = index.getChanges(old);
 
-            printChange(changes);
+            if (!cmd.hasOption("q")) {
+                printChange(changes);
+            }
+
+            exitCode = changes.hasChanges() ? 1 : 0;
 
             LOG.info("Updating file index of {} files with {} by: ", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()), changes);
             index.updateChanges(changes, false);
@@ -57,9 +63,36 @@ public class FileIndexCli {
         LOG.debug("Writing file index data to {} with {} file of {}", indexFile, index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
         new FileIndexWriter().write(index, indexFile);
         LOG.info("Written file index data to {}. The index root hash is {}", indexFile, index.getRoot().getHash());
+
+        System.exit(exitCode);
+    }
+
+    private Path getIndexFile(Path base) throws IOException {
+        Path indexFile;
+        if (cmd.hasOption("d")) {
+            indexFile = Paths.get(cmd.getOptionValue("i"));
+        } else {
+            String indexName = base.toRealPath().getFileName() + ".index";
+            indexFile = Paths.get(System.getProperty("user.home")).resolve(".cache/filecache").resolve(indexName);
+            LOG.debug("Use default index file: {}", indexFile);
+        }
+        Files.createDirectories(indexFile.getParent());
+        return indexFile;
+    }
+
+    private Path getBase() {
+        if (cmd.getArgs().length > 0) {
+            return Paths.get(cmd.getArgs()[0]);
+        } else {
+            LOG.debug("Use current working directory to index");
+            return Paths.get(".");
+        }
     }
 
     private void printChange(IndexChange changes) {
+        if (!changes.hasChanges()) {
+            System.out.println("-  No changes");
+        }
         List<String> lines = new LinkedList<>();
 
         lines.addAll(createLines("C  ", changes.getCreated()));
@@ -77,44 +110,37 @@ public class FileIndexCli {
                 .collect(Collectors.toList());
     }
 
-    public static void main(String[] args) {
+    private static void printHelp(Options options) {
+        HelpFormatter formatter = new HelpFormatter();
+        String header = "\nFollowing options are available:";
+        String footer = "\nPlease consult fileindex.log for detailed program information";
+        formatter.printHelp("fileindex <options> [path]", header, options, footer);
+        System.exit(0);
+    }
+
+    private static Options createOptions() {
         Options options = new Options();
 
-        options.addOption("d", true, "Target directory to index. Default is current working directory");
         options.addOption("h", false, "Print this help");
         options.addOption("i", true, "Index file to store. Default is ~/.cache/filecache/<dirname>.index");
+        options.addOption("q", false, "Quiet mode");
+        return options;
+    }
 
+    public static void main(String[] args) {
+        Options options = createOptions();
         CommandLineParser parser = new PosixParser();
         try {
             CommandLine cmd = parser.parse(options, args);
-            Path base = null;
-            Path indexFile = null;
 
             if (cmd.hasOption("h")) {
-                HelpFormatter formatter = new HelpFormatter();
-                formatter.printHelp("fileindex", options);
-                System.exit(0);
-            }
-            if (cmd.hasOption("d")) {
-                base = Paths.get(cmd.getOptionValue("d"));
-            } else {
-                base = Paths.get(".");
-                LOG.debug("Use current working directory to index");
+                printHelp(options);
             }
 
-            if (cmd.hasOption("d")) {
-                indexFile = Paths.get(cmd.getOptionValue("i"));
-            } else {
-                String indexName = base.toRealPath().getFileName() + ".index";
-                indexFile = Paths.get(System.getProperty("user.home")).resolve(".cache/filecache").resolve(indexName);
-                Files.createDirectories(indexFile.getParent());
-                LOG.debug("Use default index file: {}", indexFile);
-            }
-
-            new FileIndexCli(base, indexFile).run();
+            new FileIndexCli(cmd).run();
         } catch (IOException | ParseException e) {
-            LOG.error("Failed to execute", e);
-            System.err.println("Failed to execute: " + e.getMessage());
+            LOG.error("Failed to run fileindex", e);
+            System.err.println("Failed to run fileindex: " + e.getMessage());
         }
     }
 }
