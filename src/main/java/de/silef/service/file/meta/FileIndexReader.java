@@ -6,32 +6,32 @@ import java.io.*;
 import java.nio.file.Path;
 import java.util.zip.InflaterInputStream;
 
-import static de.silef.service.file.meta.FileMetaNode.MAGIC_HEADER;
+import static de.silef.service.file.meta.IndexNode.MAGIC_HEADER;
 
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileMetaCacheReader {
+public class FileIndexReader {
 
-    public FileMetaCache read(Path base, Path file) throws IOException {
+    public FileIndex read(Path base, Path file) throws IOException {
         return read(base, file, false);
     }
 
-    public FileMetaCache read(Path base, Path file, boolean suppressWarning) throws IOException {
+    public FileIndex read(Path base, Path file, boolean suppressWarning) throws IOException {
         try {
             try (InputStream input = new FileInputStream(file.toFile())) {
                 return read(base, input);
             }
         } catch (IOException e) {
             if (suppressWarning) {
-                return new FileMetaCache(base, FileMetaNode.createRootFromPath(base));
+                return new FileIndex(base, IndexNode.createRootFromPath(base));
             } else {
                 throw e;
             }
         }
     }
 
-    private FileMetaCache read(Path base, InputStream input) throws IOException {
+    private FileIndex read(Path base, InputStream input) throws IOException {
         try (InflaterInputStream inflaterInput = new InflaterInputStream(input);
              BufferedInputStream bufferedInput = new BufferedInputStream(inflaterInput);
              DataInputStream dataInput = new DataInputStream(bufferedInput)) {
@@ -40,14 +40,14 @@ public class FileMetaCacheReader {
             if (header != MAGIC_HEADER) {
                 throw new IOException("Unexpected header: " + header);
             }
-            FileMetaNode root = readNode(null, dataInput);
-            return new FileMetaCache(base, root);
+            IndexNode root = readNode(null, dataInput);
+            return new FileIndex(base, root);
         } catch (ClassNotFoundException | ClassCastException e) {
             throw new IOException("Could not read cache nodes", e);
         }
     }
 
-    private FileMetaNode readNode(FileMetaNode parent, DataInputStream input)
+    private IndexNode readNode(IndexNode parent, DataInputStream input)
             throws ClassNotFoundException, IOException {
 
         FileMode mode = FileMode.create(input.readInt());
@@ -62,7 +62,7 @@ public class FileMetaCacheReader {
 
         String name = input.readUTF();
 
-        FileMetaNode node = FileMetaNode.createFromIndex(parent, mode, size, creationTime, modifiedTime, inode, hash, name);
+        IndexNode node = IndexNode.createFromIndex(parent, mode, size, creationTime, modifiedTime, inode, hash, name);
 
         int children = input.readInt();
         for (int i = 0; i < children; i++) {

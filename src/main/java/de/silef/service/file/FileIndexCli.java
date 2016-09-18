@@ -1,8 +1,5 @@
 package de.silef.service.file;
 
-import de.silef.service.file.index.FileIndex;
-import de.silef.service.file.index.FileIndexReader;
-import de.silef.service.file.index.FileIndexWriter;
 import de.silef.service.file.meta.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,23 +30,23 @@ public class FileIndexCli {
         Path cacheFile = dir.resolve(".filecache");
         Path indexFile = dir.resolve(".fileindex");
 
-        FileMetaCache cache = new FileMetaCache(dir);
-        FileMetaChanges changes;
+        FileIndex cache = new FileIndex(dir);
+        IndexChanges changes;
         if (Files.exists(cacheFile)) {
             System.out.println("Reading file cache");
-            FileMetaCache old = new FileMetaCacheReader().read(dir, cacheFile);
+            FileIndex old = new FileIndexReader().read(dir, cacheFile);
             changes = cache.getChanges(old);
         } else {
             System.out.println("Creating file cache");
-            FileMetaCache empty = new FileMetaCache(dir, FileMetaNode.createRootFromPath(dir));
+            FileIndex empty = new FileIndex(dir, IndexNode.createRootFromPath(dir));
             changes = cache.getChanges(empty);
         }
 
-        FileIndex index = null;
+        de.silef.service.file.index.FileIndex index = null;
         if (Files.exists(indexFile)) {
             System.out.println("Reading file index");
             try {
-                index = new FileIndexReader().read(dir, indexFile);
+                index = new de.silef.service.file.index.FileIndexReader().read(dir, indexFile);
             } catch (IOException e) {
                 index = null;
                 LOG.warn("Could not read file index", e);
@@ -57,14 +54,14 @@ public class FileIndexCli {
         }
         if (index == null) {
             System.out.println("Creating file index");
-            index = new FileIndex(dir);
+            index = new de.silef.service.file.index.FileIndex(dir);
         }
         System.out.println("Updating file index");
         index.updateChanges(changes, false);
         if (changes.hasChanges()) {
-            new FileIndexWriter().write(index, indexFile);
+            new de.silef.service.file.index.FileIndexWriter().write(index, indexFile);
             System.out.println("File index is updated");
-            new FileMetaCacheWriter().write(cache, cacheFile);
+            new FileIndexWriter().write(cache, cacheFile);
             System.out.println("File cache is updated");
         }
     }

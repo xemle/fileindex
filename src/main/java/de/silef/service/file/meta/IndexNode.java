@@ -18,12 +18,12 @@ import java.util.List;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileMetaNode implements Serializable {
+public class IndexNode implements Serializable {
 
     static int MAGIC_HEADER = 0x23100702;
 
-    private FileMetaNode parent;
-    private List<FileMetaNode> children = new LinkedList<>();
+    private IndexNode parent;
+    private List<IndexNode> children = new LinkedList<>();
 
     private String name;
 
@@ -38,12 +38,12 @@ public class FileMetaNode implements Serializable {
 
     private FileHash hash = FileHash.ZERO;
 
-    private FileMetaNode() {
+    private IndexNode() {
         super();
     }
 
-    public static FileMetaNode createFromIndex(FileMetaNode parent, FileMode mode, long size, long creationTime, long modifiedTime, long inode, FileHash hash, String name) {
-        FileMetaNode node = new FileMetaNode();
+    public static IndexNode createFromIndex(IndexNode parent, FileMode mode, long size, long creationTime, long modifiedTime, long inode, FileHash hash, String name) {
+        IndexNode node = new IndexNode();
 
         node.mode = mode;
         node.size = size;
@@ -59,16 +59,16 @@ public class FileMetaNode implements Serializable {
         return node;
     }
 
-    public static FileMetaNode createRootFromPath(Path file) throws IOException {
+    public static IndexNode createRootFromPath(Path file) throws IOException {
         return createFromPath(null, file);
     }
 
-    public static FileMetaNode createFromPath(FileMetaNode parent, Path file) throws IOException {
+    public static IndexNode createFromPath(IndexNode parent, Path file) throws IOException {
         if (file == null) {
             throw new NullPointerException("Path must not be null");
         }
 
-        FileMetaNode node = new FileMetaNode();
+        IndexNode node = new IndexNode();
 
         node.name = file.getFileName().toString();
         node.size = Files.size(file);
@@ -163,7 +163,7 @@ public class FileMetaNode implements Serializable {
         try (ByteArrayOutputStream buffer = new ByteArrayOutputStream();
              DataOutputStream dataOutput = new DataOutputStream(buffer);) {
 
-            for (FileMetaNode child : children) {
+            for (IndexNode child : children) {
                 dataOutput.write(child.getHash().getBytes());
                 dataOutput.write(child.getMode().getValue());
                 dataOutput.writeUTF(child.getName());
@@ -180,7 +180,7 @@ public class FileMetaNode implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        FileMetaNode that = (FileMetaNode) o;
+        IndexNode that = (IndexNode) o;
 
         if (inode != that.inode) return false;
         if (modifiedTime != that.modifiedTime) return false;
@@ -203,17 +203,17 @@ public class FileMetaNode implements Serializable {
         return result;
     }
 
-    public List<FileMetaNode> getChildren() {
+    public List<IndexNode> getChildren() {
         return new ArrayList<>(children);
     }
 
-    private void addChild(FileMetaNode node) {
+    private void addChild(IndexNode node) {
         removeChildByName(node.getName());
         children.add(node);
         sortChildren();
     }
 
-    public FileMetaNode removeChildByName(String name) {
+    public IndexNode removeChildByName(String name) {
         if (children.isEmpty()) {
             return null;
         }
@@ -223,7 +223,7 @@ public class FileMetaNode implements Serializable {
             return null;
         }
 
-        FileMetaNode node = children.remove(index);
+        IndexNode node = children.remove(index);
         sortChildren();
         return node;
     }
@@ -231,7 +231,7 @@ public class FileMetaNode implements Serializable {
     private int findChildIndexByName(String name, int low, int high) {
         int i = low + (high - low);
 
-        FileMetaNode node = children.get(i);
+        IndexNode node = children.get(i);
         assert node != null : "Child at " + i + " is null";
         int cmp = node.getName().compareTo(name);
 
@@ -264,7 +264,7 @@ public class FileMetaNode implements Serializable {
         }
     }
 
-    public void setParent(FileMetaNode parent) {
+    public void setParent(IndexNode parent) {
         this.parent = parent;
         if (parent != null) {
             parent.addChild(this);

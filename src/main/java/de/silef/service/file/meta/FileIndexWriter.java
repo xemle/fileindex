@@ -5,32 +5,32 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.zip.DeflaterOutputStream;
 
-import static de.silef.service.file.meta.FileMetaNode.MAGIC_HEADER;
+import static de.silef.service.file.meta.IndexNode.MAGIC_HEADER;
 
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileMetaCacheWriter {
+public class FileIndexWriter {
 
-    public void write(FileMetaCache cache, Path path) throws IOException {
+    public void write(FileIndex cache, Path path) throws IOException {
         try (FileOutputStream output = new FileOutputStream(path.toFile())) {
             write(cache, output);
         }
     }
 
-    public void write(FileMetaCache cache, OutputStream output) throws IOException {
+    public void write(FileIndex cache, OutputStream output) throws IOException {
         try (DeflaterOutputStream deflaterOutput = new DeflaterOutputStream(output);
              BufferedOutputStream bufferedOutput = new BufferedOutputStream(deflaterOutput);
              DataOutputStream dataOutput = new DataOutputStream(bufferedOutput)) {
 
-            FileMetaNode root = cache.getRoot();
+            IndexNode root = cache.getRoot();
 
             dataOutput.writeInt(MAGIC_HEADER);
             writeNode(root, dataOutput);
         }
     }
 
-    private void writeNode(FileMetaNode node, DataOutputStream output)
+    private void writeNode(IndexNode node, DataOutputStream output)
             throws IOException {
         output.writeInt(node.getMode().getValue());
         output.writeLong(node.getSize());
@@ -41,9 +41,9 @@ public class FileMetaCacheWriter {
 
         output.writeUTF(node.getName());
 
-        Collection<FileMetaNode> children = node.getChildren();
+        Collection<IndexNode> children = node.getChildren();
         output.writeInt(children.size());
-        for (FileMetaNode child : children) {
+        for (IndexNode child : children) {
             writeNode(child, output);
         }
     }

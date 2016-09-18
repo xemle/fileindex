@@ -12,24 +12,24 @@ import java.util.stream.Collectors;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileMetaCache {
+public class FileIndex {
 
-    private static final Logger LOG = LoggerFactory.getLogger(FileMetaCache.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FileIndex.class);
 
     private Path base;
 
-    private FileMetaNode root;
+    private IndexNode root;
 
-    public FileMetaCache(Path base) throws IOException {
+    public FileIndex(Path base) throws IOException {
         this(base, build(base));
     }
 
-    public FileMetaCache(Path base, FileMetaNode root) {
+    public FileIndex(Path base, IndexNode root) {
         this.base = base;
         this.root = root;
     }
 
-    private static FileMetaNode build(Path base) throws IOException {
+    private static IndexNode build(Path base) throws IOException {
         CachePathVisitor cacheVisitor = new CachePathVisitor();
         PathVisitor realPathVisitor = new RealPathVisitorFilter(base, cacheVisitor);
         PathVisitor suppressErrorVisitor = new SuppressErrorPathVisitor(realPathVisitor);
@@ -39,7 +39,7 @@ public class FileMetaCache {
         return cacheVisitor.getRoot();
     }
 
-    public Collection<FileMetaNode> getFileMetaNodes() {
+    public Collection<IndexNode> getFileMetaNodes() {
         return flattenMeta().values();
     }
 
@@ -47,13 +47,13 @@ public class FileMetaCache {
         return flattenMeta().keySet();
     }
 
-    public FileMetaChanges getChanges() throws IOException {
-        return getChanges(new FileMetaCache(base));
+    public IndexChanges getChanges() throws IOException {
+        return getChanges(new FileIndex(base));
     }
 
-    public FileMetaChanges getChanges(FileMetaCache other) {
-        Map<String, FileMetaNode> meta = flattenMeta();
-        Map<String, FileMetaNode> otherMeta = other.flattenMeta();
+    public IndexChanges getChanges(FileIndex other) {
+        Map<String, IndexNode> meta = flattenMeta();
+        Map<String, IndexNode> otherMeta = other.flattenMeta();
 
         Set<String> created = new HashSet<>(meta.keySet());
         created.removeAll(otherMeta.keySet());
@@ -70,7 +70,7 @@ public class FileMetaCache {
 
 
         if (LOG.isInfoEnabled()) {
-            long totalSize = meta.values().stream().map(FileMetaNode::getSize).reduce(0L, (a, b) -> a + b);
+            long totalSize = meta.values().stream().map(IndexNode::getSize).reduce(0L, (a, b) -> a + b);
             long createdSize = sumFileSize(created, meta);
             long modifiedSize = sumFileSize(modified, meta);
             long removedSize = sumFileSize(removed, otherMeta);
@@ -81,33 +81,33 @@ public class FileMetaCache {
                     modified.size(), ByteUtil.toHumanSize(modifiedSize),
                     removed.size(), ByteUtil.toHumanSize(removedSize));
         }
-        return new FileMetaChanges(base, created, modified, removed);
+        return new IndexChanges(base, created, modified, removed);
     }
 
-    private long sumFileSize(Set<String> created, Map<String, FileMetaNode> meta) {
+    private long sumFileSize(Set<String> created, Map<String, IndexNode> meta) {
         return created.stream()
                 .map(meta::get)
                 .filter(f -> f != null)
-                .map(FileMetaNode::getSize)
+                .map(IndexNode::getSize)
                 .reduce(0L, (a, b) -> a + b);
     }
 
-    private Map<String, FileMetaNode> flattenMeta() {
-        Map<String, FileMetaNode> result = new HashMap<>();
+    private Map<String, IndexNode> flattenMeta() {
+        Map<String, IndexNode> result = new HashMap<>();
         collectMeta(root, result);
         return result;
     }
 
-    private void collectMeta(FileMetaNode meta, Map<String, FileMetaNode> result) {
+    private void collectMeta(IndexNode meta, Map<String, IndexNode> result) {
         if (meta.getMode() != FileMode.DIRECTORY) {
             result.put(meta.getRelativePath().toString(), meta);
         }
-        for (FileMetaNode child : meta.getChildren()) {
+        for (IndexNode child : meta.getChildren()) {
             collectMeta(child, result);
         }
     }
 
-    public FileMetaNode getRoot() {
+    public IndexNode getRoot() {
         return root;
     }
 }

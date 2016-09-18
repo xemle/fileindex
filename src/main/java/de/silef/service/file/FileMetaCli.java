@@ -1,9 +1,9 @@
 package de.silef.service.file;
 
-import de.silef.service.file.meta.FileMetaCache;
-import de.silef.service.file.meta.FileMetaCacheReader;
-import de.silef.service.file.meta.FileMetaCacheWriter;
-import de.silef.service.file.meta.FileMetaChanges;
+import de.silef.service.file.meta.FileIndex;
+import de.silef.service.file.meta.FileIndexReader;
+import de.silef.service.file.meta.FileIndexWriter;
+import de.silef.service.file.meta.IndexChanges;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -27,7 +27,7 @@ public class FileMetaCli {
 
         System.out.println("Reading tree");
         long t1 = System.currentTimeMillis();
-        FileMetaCache cache = new FileMetaCache(dir);
+        FileIndex cache = new FileIndex(dir);
         long t2 = System.currentTimeMillis();
         System.out.println("Reading tree took " + (t2 - t1) + "ms");
 
@@ -36,11 +36,11 @@ public class FileMetaCli {
             System.out.println("Reading cache");
 
             long t3 = System.currentTimeMillis();
-            FileMetaCache old = new FileMetaCacheReader().read(dir, cacheFile, true);
+            FileIndex old = new FileIndexReader().read(dir, cacheFile, true);
             long t4 = System.currentTimeMillis();
 
             System.out.println("Reading cache took " + (t4 - t3) + "ms");
-            FileMetaChanges changes = cache.getChanges(old);
+            IndexChanges changes = cache.getChanges(old);
             if (changes.hasChanges()) {
                 System.out.println("Created: " + changes.getCreated());
                 System.out.println("Changed: " + changes.getModified());
@@ -50,7 +50,7 @@ public class FileMetaCli {
 
         System.out.println("Writing cache");
         long t5 = System.currentTimeMillis();
-        new FileMetaCacheWriter().write(cache, cacheFile);
+        new FileIndexWriter().write(cache, cacheFile);
         long t6 = System.currentTimeMillis();
         System.out.println("Writing cache took " + (t6 - t5) + "ms");
     }

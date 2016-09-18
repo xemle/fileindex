@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class FileMetaChanges {
+public class IndexChanges {
 
     private Path base;
 
@@ -18,7 +18,7 @@ public class FileMetaChanges {
 
     private Set<String> removed;
 
-    public FileMetaChanges(Path base, Set<String> created, Set<String> modified, Set<String> removed) {
+    public IndexChanges(Path base, Set<String> created, Set<String> modified, Set<String> removed) {
         this.created = created;
         this.modified = modified;
         this.removed = removed;

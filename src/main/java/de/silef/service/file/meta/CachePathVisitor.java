@@ -13,15 +13,15 @@ import java.util.List;
  */
 public class CachePathVisitor extends PathVisitor {
 
-    private List<FileMetaNode> parentStack;
+    private List<IndexNode> parentStack;
 
-    private FileMetaNode root;
+    private IndexNode root;
 
     public CachePathVisitor() throws IOException {
         parentStack = new ArrayList<>();
     }
 
-    public FileMetaNode getRoot() {
+    public IndexNode getRoot() {
         return root;
     }
 
@@ -49,9 +49,9 @@ public class CachePathVisitor extends PathVisitor {
     }
 
 
-    private FileMetaNode addCacheNode(Path path) throws IOException {
-        FileMetaNode parent = parentStack.isEmpty() ? null : parentStack.get(parentStack.size() - 1);
-        return FileMetaNode.createFromPath(parent, path);
+    private IndexNode addCacheNode(Path path) throws IOException {
+        IndexNode parent = parentStack.isEmpty() ? null : parentStack.get(parentStack.size() - 1);
+        return IndexNode.createFromPath(parent, path);
     }
 
 }
