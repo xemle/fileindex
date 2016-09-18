@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Created by sebastian on 18.09.16.
@@ -34,10 +35,14 @@ public class IndexUpdater {
         if (!change.hasChanges()) {
             return;
         }
-        Set<IndexNode> update = new HashSet<>(change.getCreated());
-        update.addAll(new HashSet<>(change.getModified()));
+        Set<IndexNode> updateNodes = new HashSet<>(change.getCreated());
+        updateNodes.addAll(new HashSet<>(change.getModified()));
 
-        updateAll(update, fileUpdateConsumer, suppressErrors);
+        List<IndexNode> updateNodesSorted = updateNodes.stream()
+                .sorted((a, b) -> a.getRelativePath().compareTo(b.getRelativePath()))
+                .collect(Collectors.toList());
+
+        updateAll(updateNodesSorted, fileUpdateConsumer, suppressErrors);
         removeAll(change.getRemoved());
 
         root.getHash();
