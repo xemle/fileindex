@@ -4,6 +4,8 @@ import de.silef.service.file.hash.FileHash;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.InflaterInputStream;
 
 import static de.silef.service.file.index.IndexNode.MAGIC_HEADER;
@@ -64,11 +66,12 @@ public class IndexNodeReader {
 
         IndexNode node = IndexNode.createFromIndex(parent, mode, size, creationTime, modifiedTime, inode, hash, name);
 
-        int children = input.readInt();
-        for (int i = 0; i < children; i++) {
-            readNode(node, input);
+        int childrenCount = input.readInt();
+        List<IndexNode> children = new ArrayList<>(childrenCount);
+        for (int i = 0; i < childrenCount; i++) {
+            children.add(readNode(node, input));
         }
-
+        node.setChildren(children);
         return node;
     }
 }

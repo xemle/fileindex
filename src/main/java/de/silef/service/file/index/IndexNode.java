@@ -25,7 +25,7 @@ public class IndexNode implements Serializable {
     static int MAGIC_HEADER = 0x23100702;
 
     private IndexNode parent = null;
-    private List<IndexNode> children = new LinkedList<>();
+    private List<IndexNode> children = new ArrayList<>();
 
     private String name;
 
@@ -55,8 +55,7 @@ public class IndexNode implements Serializable {
         node.name = name;
         node.hash = hash;
         node.children = new ArrayList<>();
-        node.setParent(parent);
-        node.sortChildren();
+        node.parent = parent;
 
         return node;
     }
@@ -71,7 +70,7 @@ public class IndexNode implements Serializable {
         assert parent != null : "Parent must not be null";
 
         IndexNode node = createFromPath(file, file.getFileName().toString());
-        node.setParent(parent);
+        node.parent = parent;
 
         return node;
     }
@@ -131,6 +130,10 @@ public class IndexNode implements Serializable {
             }
         }
         return 0;
+    }
+
+    public IndexNode getParent() {
+        return parent;
     }
 
     public String getName() {
@@ -224,6 +227,11 @@ public class IndexNode implements Serializable {
         sortChildren();
     }
 
+    void setChildren(List<IndexNode> children) {
+        this.children = new ArrayList<>(children);
+        sortChildren();
+    }
+
     public IndexNode removeChildByName(String name) {
         if (children.isEmpty()) {
             return null;
@@ -290,9 +298,6 @@ public class IndexNode implements Serializable {
 
     public void setParent(IndexNode parent) {
         this.parent = parent;
-        if (parent != null) {
-            parent.addChild(this);
-        }
     }
 
     public void walk(Consumer<IndexNode> consumer) {

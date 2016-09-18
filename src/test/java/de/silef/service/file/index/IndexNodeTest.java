@@ -82,7 +82,7 @@ public class IndexNodeTest {
         IndexNode node = IndexNode.createFromPath(parentMock, file);
 
 
-        verify(parentMock, times(1)).addChild(eq(node));
+        assertThat(node.getParent(), is(parentMock));
     }
 
     @Test
@@ -111,7 +111,7 @@ public class IndexNodeTest {
         IndexNode node = IndexNode.createFromIndex(parentMock, FileMode.DIRECTORY, 4096, 1474140125896L, 1481247415896L, 2285605, new FileHash("12345678901234567890".getBytes()), "foo");
 
 
-        verify(parentMock, times(1)).addChild(eq(node));
+        assertThat(node.getParent(), is(parentMock));
     }
 
     @Test
