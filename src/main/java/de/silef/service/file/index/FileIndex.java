@@ -47,11 +47,12 @@ public class FileIndex {
     }
 
     private static IndexNode build(Path base, Predicate<Path> indexPathFilter) throws IOException {
+        PathVisitor resolveLinkPathVisitor = new ResolveLinkPathVisitorFilter(base);
+        PathVisitor filterVisitor = new PathVisitorFilter(indexPathFilter);
         IndexPathVisitor nodeVisitor = new IndexPathVisitor();
-        PathVisitor resolveLinkPathVisitor = new ResolveLinkPathVisitorFilter(base, nodeVisitor);
-        PathVisitor filterVisitor = new PathVisitorFilter(indexPathFilter, resolveLinkPathVisitor);
-        PathVisitor suppressErrorVisitor = new SuppressErrorPathVisitor(filterVisitor);
+        PathVisitorChain visitorChain = new PathVisitorChain(resolveLinkPathVisitor, filterVisitor, nodeVisitor);
 
+        PathVisitor suppressErrorVisitor = new SuppressErrorPathVisitor(visitorChain);
         PathWalker.walk(base, suppressErrorVisitor);
 
         IndexNode root = nodeVisitor.getRoot();

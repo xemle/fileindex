@@ -17,35 +17,27 @@ public class ResolveLinkPathVisitorFilter extends PathVisitor {
 
     private Path base;
 
-    private PathVisitor delgate;
-
-    public ResolveLinkPathVisitorFilter(Path base, PathVisitor delgate) throws IOException {
+    public ResolveLinkPathVisitorFilter(Path base) throws IOException {
         this.base = base.toRealPath();
-        this.delgate = delgate;
     }
 
     @Override
     public VisitorResult preVisitDirectory(Path dir) throws IOException {
-        if (doDelgate(dir)) {
-            return delgate.preVisitDirectory(dir);
+        if (hasSameBasePath(dir)) {
+            return super.preVisitDirectory(dir);
         }
         return VisitorResult.SKIP;
     }
 
     @Override
     public VisitorResult visitFile(Path file) throws IOException {
-        if (doDelgate(file)) {
-            return delgate.visitFile(file);
+        if (hasSameBasePath(file)) {
+            return super.visitFile(file);
         }
         return VisitorResult.SKIP;
     }
 
-    @Override
-    public VisitorResult postVisitDirectory(Path file) throws IOException {
-        return delgate.postVisitDirectory(file);
-    }
-
-    private boolean doDelgate(Path path) throws IOException {
+    private boolean hasSameBasePath(Path path) throws IOException {
         if (Files.isSymbolicLink(path)) {
             try {
                 Path realPath = path.toRealPath();

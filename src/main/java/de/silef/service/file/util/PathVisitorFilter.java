@@ -11,11 +11,8 @@ public class PathVisitorFilter extends PathVisitor {
 
     private Predicate<Path> filter;
 
-    private PathVisitor delegate;
-
-    public PathVisitorFilter(Predicate<Path> filter, PathVisitor delegate) {
+    public PathVisitorFilter(Predicate<Path> filter) {
         this.filter = filter;
-        this.delegate = delegate;
     }
 
     @Override
@@ -23,7 +20,7 @@ public class PathVisitorFilter extends PathVisitor {
         if (!filter.test(dir)) {
             return VisitorResult.SKIP;
         }
-        return delegate.preVisitDirectory(dir);
+        return super.preVisitDirectory(dir);
     }
 
     @Override
@@ -31,11 +28,7 @@ public class PathVisitorFilter extends PathVisitor {
         if (!filter.test(file)) {
             return VisitorResult.SKIP;
         }
-        return delegate.visitFile(file);
+        return super.visitFile(file);
     }
 
-    @Override
-    public VisitorResult postVisitDirectory(Path dir) throws IOException {
-        return delegate.postVisitDirectory(dir);
-    }
 }
