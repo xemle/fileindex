@@ -34,7 +34,6 @@ General structure:
     +----------------+
     |      ...       |
 
-
 Single index node structure:
 
     +----------------+
@@ -101,3 +100,21 @@ See `man (2) stat` for details. The Enums are defined as follow
     OTHER     (0000000);
 
 Currently the Unix file permissions are not considered.
+
+## Index File Size
+
+The estimated index file size can be calculated as follow:
+
+    size = (4 + r * f * (62 + n)) * z
+
+- `f` for number of files
+- `r` as ratio files per directory, 75 file per directory means `(75 + 1) / 75` with a ratio of 1.013.
+- `n` average filename length
+- `z` lzip compression ratio which is blow 0.5
+
+For 144240 files with 75 files per directory, average filename
+length of 15 and 0.5 compression ratio, the index file size is
+`(4 + 1.013 * 144240 * (62 + 15)) * 0.5 = 5627100B` about 5.36 MB.
+
+The index file size depends heavily on the file count not and not 
+on file sizes.
