@@ -114,7 +114,17 @@ public class FileIndexCli {
 
     private void writeIndex(FileIndex index, Path indexFile) throws IOException {
         LOG.debug("Writing file index data to {} with {} file of {}", indexFile, index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
-        new IndexNodeWriter().write(index.getRoot(), indexFile);
+
+        Path tmp = null;
+        try {
+            tmp = indexFile.getParent().resolve(indexFile.getFileName() + ".tmp");
+            new IndexNodeWriter().write(index.getRoot(), tmp);
+            Files.move(tmp, indexFile);
+        } catch (IOException e) {
+            if (tmp != null) {
+                Files.delete(tmp);
+            }
+        }
         LOG.info("Written file index data to {}. The index root hash is {}", indexFile, index.getRoot().getHash());
     }
 
