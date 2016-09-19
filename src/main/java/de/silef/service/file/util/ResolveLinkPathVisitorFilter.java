@@ -11,15 +11,15 @@ import java.nio.file.Path;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class RealPathVisitorFilter extends PathVisitor {
+public class ResolveLinkPathVisitorFilter extends PathVisitor {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RealPathVisitorFilter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ResolveLinkPathVisitorFilter.class);
 
     private Path base;
 
     private PathVisitor delgate;
 
-    public RealPathVisitorFilter(Path base, PathVisitor delgate) throws IOException {
+    public ResolveLinkPathVisitorFilter(Path base, PathVisitor delgate) throws IOException {
         this.base = base.toRealPath();
         this.delgate = delgate;
     }

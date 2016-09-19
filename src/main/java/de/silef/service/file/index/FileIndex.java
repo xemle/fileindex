@@ -48,8 +48,8 @@ public class FileIndex {
 
     private static IndexNode build(Path base, Predicate<Path> indexPathFilter) throws IOException {
         IndexPathVisitor nodeVisitor = new IndexPathVisitor();
-        PathVisitor realPathVisitor = new RealPathVisitorFilter(base, nodeVisitor);
-        PathVisitor filterVisitor = new PathVisitorFilter(indexPathFilter, realPathVisitor);
+        PathVisitor resolveLinkPathVisitor = new ResolveLinkPathVisitorFilter(base, nodeVisitor);
+        PathVisitor filterVisitor = new PathVisitorFilter(indexPathFilter, resolveLinkPathVisitor);
         PathVisitor suppressErrorVisitor = new SuppressErrorPathVisitor(filterVisitor);
 
         PathWalker.walk(base, suppressErrorVisitor);
