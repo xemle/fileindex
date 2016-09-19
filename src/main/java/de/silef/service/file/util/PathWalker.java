@@ -26,7 +26,7 @@ public class PathWalker {
             return;
         }
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(base)) {
-            List<Path> paths = StreamSupport.stream(directoryStream.spliterator(), false).collect(Collectors.toList());
+            List<Path> paths = StreamSupport.stream(directoryStream.spliterator(), false).sorted().collect(Collectors.toList());
             for (Path path : paths) {
                 if (!Files.isReadable(path)) {
                     continue;
