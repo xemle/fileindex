@@ -14,11 +14,15 @@ public class ByteUtil {
 
     public static String toHumanSize(long bytes) {
         int unit = 0;
-        while (bytes > 4096) {
-            bytes = bytes / 1024;
+        double value = bytes;
+        while (value > 4096) {
+            value = value / 1024;
             unit++;
         }
-        return String.valueOf(bytes) + units[unit];
+        if (unit == 0) {
+            return String.valueOf(bytes) + units[unit];
+        }
+        return String.format("%.1f%s", value, units[unit]);
     }
 
     public static long toByte(String size) throws ParseException {

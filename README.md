@@ -64,7 +64,7 @@ For help use `-h` option:
      -i <arg>                     Index file to store. Default is
                                   ~/.cache/filecache/<dirname>.index
      -M,--verify-max-size <arg>   Limit content integrity verification 
-                                  file by size
+                                  file by size. Use 0 to disable
      -q                           Quiet mode
     
     Please consult fileindex.log for detailed program information

@@ -220,7 +220,7 @@ public class FileIndexCli {
         options.addOption(Option.builder("M")
                 .longOpt("verify-max-size")
                 .hasArg(true)
-                .desc("Limit content integrity verification by file size")
+                .desc("Limit content integrity verification by file size. Use 0 to disable")
                 .build());
         return options;
     }
