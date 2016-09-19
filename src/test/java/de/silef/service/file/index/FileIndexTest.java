@@ -6,7 +6,9 @@ import de.silef.service.file.test.PathUtils;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -38,6 +40,22 @@ public class FileIndexTest extends BasePathTest {
 
 
         verifyRootHash(index, "477f1ae1b076ace04a5d398687113a8c539f46a6");
+    }
+
+    @Test
+    public void initializeTreeHashWithSymbolicLink() throws IOException {
+        PathUtils.copy(PathUtils.getResourcePath("index/foo"), tmp);
+
+        Files.createSymbolicLink(tmp.resolve("bar/doe-link.txt"), Paths.get("../doe.txt"));
+        Files.createSymbolicLink(tmp.resolve("zoo-link.txt"), Paths.get("bar/zoo.txt"));
+
+        FileIndex index = new FileIndex(tmp);
+
+
+        index.initializeTreeHash();
+
+
+        verifyRootHash(index, "7d419281b37ceafbb94a65b664146a03e8c2736e");
     }
 
     private void verifyRootHash(FileIndex index, String hash) {

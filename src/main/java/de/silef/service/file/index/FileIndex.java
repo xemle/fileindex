@@ -106,11 +106,17 @@ public class FileIndex {
                     return;
                 }
                 Path file = base.resolve(node.getRelativePath());
-                if (!Files.isRegularFile(file)) {
+                if (!Files.isSymbolicLink(file) && !Files.isRegularFile(file)) {
                     return;
                 }
                 try {
-                    byte[] hash = HashUtil.getHash(file);
+                    byte[] hash;
+                    if (Files.isRegularFile(file)) {
+                        hash = HashUtil.getHash(file);
+                    } else {
+                        Path link = Files.readSymbolicLink(file);
+                        hash = HashUtil.getHash(link.toString().getBytes());
+                    }
                     node.setHash(new FileHash(hash));
                 } catch (IOException e) {
                     LOG.warn("Could not update content hash from {}", file);
