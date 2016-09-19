@@ -260,9 +260,12 @@ public class IndexNode implements Serializable {
         return relativePath;
     }
 
-    public void resetHashesToRootNode() {
-        hash = null;
+    void resetHashesToRootNode() {
+        if (hash == null) {
+            return;
+        }
 
+        hash = null;
         if (parent != null) {
             parent.resetHashesToRootNode();
         }
