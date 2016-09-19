@@ -79,15 +79,8 @@ public class FileIndex {
     }
 
     public IndexChange getChanges() throws IOException {
-        return getChanges(new FileIndex(base, indexPathFilter, hashNodeFilter));
-    }
-
-    public long getTotalFileSize() {
-        return root.stream().map(IndexNode::getSize).reduce(0L, (a, b) -> a + b);
-    }
-
-    public long getTotalFileCount() {
-        return root.stream().count();
+        FileIndex current = new FileIndex(base, indexPathFilter, hashNodeFilter);
+        return current.getChanges(this);
     }
 
     public IndexChange getChanges(FileIndex other) {
@@ -127,5 +120,17 @@ public class FileIndex {
 
     public IndexNode getRoot() {
         return root;
+    }
+
+    public long getTotalFileSize() {
+        return root.stream().map(IndexNode::getSize).reduce(0L, (a, b) -> a + b);
+    }
+
+    public long getTotalFileCount() {
+        return root.stream().count();
+    }
+
+    public Path getBase() {
+        return base;
     }
 }

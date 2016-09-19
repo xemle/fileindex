@@ -41,37 +41,45 @@ public class FileIndexCli {
         Predicate<Path> pathIndexFilter = p -> true;
         Predicate<IndexNode> hashNodeFilter = getHashNodeFilter();
 
-        final AtomicBoolean done = new AtomicBoolean(false);
-
-        FileIndex index = readIndexMetaData(base, pathIndexFilter, hashNodeFilter);
-
         if (!Files.exists(indexFile)) {
-            addShutdownHook(done, () -> {
-                writeIndex(index, indexFile);
-                return null;
-            });
-            initializeIndex(index);
-            writeIndex(index, indexFile);
-            done.set(true);
-            System.out.println("File index successfully created");
-        } else {
-            IndexChange changes = getIndexChanges(base, pathIndexFilter, hashNodeFilter, indexFile, index);
-
-            if (cmd.hasOption('n')) {
-                System.exit(0);
-            }
-
-            if (changes.hasChanges()) {
-                addShutdownHook(done, () -> {
-                    writeIndex(index, indexFile);
-                    return null;
-                });
-                updateIndex(index, changes);
-                writeIndex(index, indexFile);
-                done.set(true);
-                System.exit(1);
-            }
+            createIndex(base, indexFile, pathIndexFilter, hashNodeFilter);
+            return;
         }
+
+        FileIndex index = readIndex(base, indexFile, pathIndexFilter, hashNodeFilter);
+        IndexChange changes = getIndexChanges(index);
+
+        if (cmd.hasOption('n')) {
+            System.exit(0);
+        }
+
+        updateIndex(indexFile, index, changes);
+    }
+
+    private void createIndex(Path base, Path indexFile, Predicate<Path> pathIndexFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
+        FileIndex index = readIndexMetaData(base, pathIndexFilter, hashNodeFilter);
+        AtomicBoolean done = new AtomicBoolean();
+        addShutdownHook(done, () -> {
+            writeIndex(index, indexFile);
+            return null;
+        });
+        initializeIndex(index);
+        writeIndex(index, indexFile);
+        done.set(true);
+        System.out.println("File index successfully created");
+    }
+
+    private void initializeIndex(FileIndex index) throws IOException {
+        LOG.info("Initializing file content hashes. This might take some time!");
+        index.initializeTreeHash();
+        LOG.debug("Initialized file content hashes");
+    }
+
+    private FileIndex readIndex(Path base, Path indexFile, Predicate<Path> pathIndexFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
+        LOG.debug("Reading existing file index from {}", indexFile);
+        IndexNode root = new IndexNodeReader().read(base, indexFile);
+        LOG.debug("Read file index", indexFile);
+        return new FileIndex(base, root, pathIndexFilter, hashNodeFilter);
     }
 
     private void addShutdownHook(AtomicBoolean done, Callable<Void> hook) {
@@ -91,9 +99,9 @@ public class FileIndexCli {
     }
 
     private FileIndex readIndexMetaData(Path base, Predicate<Path> pathIndexFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
-        LOG.debug("Reading file index data from {}", base.toAbsolutePath());
+        LOG.debug("Reading file index from {}", base.toAbsolutePath());
         FileIndex index = new FileIndex(base, pathIndexFilter, hashNodeFilter);
-        LOG.info("Found {} files of {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+        LOG.info("Found {} files with {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
         return index;
     }
 
@@ -136,25 +144,10 @@ public class FileIndexCli {
         LOG.info("Written file index data to {}. The index root hash is {}", indexFile, index.getRoot().getHash());
     }
 
-    private void initializeIndex(FileIndex index) throws IOException {
-        LOG.info("Creating file index. This might take some time!");
-        index.initializeTreeHash();
-        LOG.debug("File index created");
-    }
-
-    private void updateIndex(FileIndex index, IndexChange changes) throws IOException {
-        LOG.info("Updating file index of {} files with {} by: ", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()), changes);
-        index.updateChanges(changes, false);
-        LOG.debug("Updated file index");
-    }
-
-    private IndexChange getIndexChanges(Path base, Predicate<Path> pathIndexFilter, Predicate<IndexNode> hashNodeFilter, Path indexFile, FileIndex index) throws IOException {
-        LOG.debug("Reading existing file index from {}", indexFile);
-        IndexNode root = new IndexNodeReader().read(base, indexFile);
-        FileIndex old = new FileIndex(base, root, pathIndexFilter, hashNodeFilter);
-
-        LOG.debug("Calculating file changes");
-        IndexChange changes = index.getChanges(old);
+    private IndexChange getIndexChanges(FileIndex index) throws IOException {
+        LOG.debug("Updating index from {}", index.getBase());
+        IndexChange changes = index.getChanges();
+        LOG.debug("Updated index");
 
         // Add all empty hashes to the modified change to resume hash calculation
         Set<IndexNode> emptyHashes = index.getRoot().stream()
@@ -170,6 +163,24 @@ public class FileIndexCli {
             printChange(resumeChange);
         }
         return resumeChange;
+    }
+
+    private void updateIndex(Path indexFile, FileIndex index, IndexChange changes) throws IOException {
+        if (!changes.hasChanges()) {
+            return;
+        }
+        AtomicBoolean done = new AtomicBoolean();
+        addShutdownHook(done, () -> {
+            writeIndex(index, indexFile);
+            return null;
+        });
+        LOG.info("Updating file index of {} files with {} by: ", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()), changes);
+        index.updateChanges(changes, false);
+        LOG.debug("Updated file index");
+
+        writeIndex(index, indexFile);
+        done.set(true);
+        System.exit(1);
     }
 
     private Path getIndexFile(Path base) throws IOException {
