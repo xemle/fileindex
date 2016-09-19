@@ -10,12 +10,11 @@ import java.security.NoSuchAlgorithmException;
  */
 public class HashUtil {
 
-    public static int HASH_LEN = 20;
+    private static final int BUFFER_SIZE = 1 << 14;
 
     public static byte[] getHash(Path path) throws IOException {
-        try (InputStream input = new FileInputStream(path.toFile());
-             BufferedInputStream bufferedInput = new BufferedInputStream(input)) {
-            return getHash(bufferedInput);
+        try (InputStream input = new FileInputStream(path.toFile())) {
+            return getHash(input);
         }
     }
 
@@ -39,7 +38,7 @@ public class HashUtil {
     }
 
     private static byte[] createHash(InputStream inputStream, MessageDigest digest) throws IOException {
-        byte[] buf = new byte[1 << 14];
+        byte[] buf = new byte[BUFFER_SIZE];
         int read;
         while ((read = inputStream.read(buf)) > 0) {
             digest.update(buf, 0, read);
