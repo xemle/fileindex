@@ -1,7 +1,8 @@
 # File Index Cache
 
-Lightning fast file change lookups with content integrity check. An inspiration of
-GIT index.
+Lightning fast file change lookups with content integrity verification
+
+>  A tribute to GIT index
 
 ## Motivation
  

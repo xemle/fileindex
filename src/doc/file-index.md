@@ -21,15 +21,15 @@ General structure:
     |    4 bytes     |  Header 0x23100702
     +----------------+
     +----------------+
-    |    n bytes     |  Root node  
+    |    n bytes     |  Root index node
     |                |
     +----------------+
     |    4 bytes     |  Children count
     +----------------+
-    |    n bytes     |  Child node
+    |    n bytes     |  Child index node
     |                |
     +----------------+
-    |    n bytes     |  Child node
+    |    n bytes     |  Child index node
     |                |
     +----------------+
     |      ...       |
@@ -116,5 +116,5 @@ For 144240 files with 75 files per directory, average filename
 length of 15 and 0.5 compression ratio, the index file size is
 `(4 + 1.013 * 144240 * (62 + 15)) * 0.5 = 5627100B` about 5.36 MB.
 
-The index file size depends heavily on the file count not and not 
-on file sizes.
+The index file size depends heavily on the file count and not on
+file sizes.
