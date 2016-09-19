@@ -5,28 +5,31 @@ GIT index.
 
 ## Motivation
  
-Everyone works with files and we are depending heavily on their freshness. Which
-file was changed? Are there any updates? Do I need to copy it? Services like Dropbox,
-and Google Drive, Backup systems and Desktop search engines, thumbnail generations 
-and build systems, etc. all need to know what is happening with the user's files. 
+Everyone works with files and we are depending heavily on their integrity and 
+freshness. Which file was changed (uninformed)? Are there any updates? Do I need
+to get a fresh copy? Services like DropBox and Google Drive, Backup systems and 
+virus detections, thumbnail generations and Desktop search engines, etc. all need 
+to know what is happening with the user's files.
 
 File change detection and integrity checks are fundamental requirements for 
-almost every systems. Time to answer these questions can be crucial, too. E.g. is
-the data still up-to-date after the time consuming backup procedure has finished?
+almost every system. Time to answer these questions can be crucial, too. E.g. is
+the data still up-to-date after the time consuming backup or upload procedure 
+finished?
 
-File Index Cache helps answers these questions fast and correct. It builds a fast 
-lookup index of a full directory structure. The change is detected by comparing
-a persisted index with the current filesystem state. Filesystem informations like
-modification timestamps or inodes on Unix systems help to get very good results.
+File Index Cache answers these questions fast and correct. It builds a fast 
+lookup index of a full directory structure. The changes are detected by comparing
+a persisted index with the current filesystem state. Filesystem information like
+file size, modification timestamps or inodes on Unix systems help to get very good 
+results.
 
-Furthermore, the file content can be verified by there content hash. Checksums of
-files and directories from the files leaves up to the root directory and a
-cryptographic hash sum verifies that no single bit changed. The fingerprint of 
-the root hash tree summarizes the state down to just a few bytes. 
-For synchronization proposes the hash tree can cut-off huge common sub directories 
-and only changed folders and files can be detected.
+Furthermore, the files and directory structure can be verified - securely. Checksums of
+files and directories from files leaves up to the root directory verifies that no 
+single bit changed. The fingerprint of the root hash tree summarizes the cryptographic 
+locked state down to just a few bytes. The root hash can be calculated and verified
+on other copies. For synchronization proposes the hash tree can cut-off huge common 
+sub directories and only changed folders and files can be detected and updated.
 
-There are sooo many use cases for this file index...
+There are sooo many use cases for this file index cache...
 
 ## Usage
 
