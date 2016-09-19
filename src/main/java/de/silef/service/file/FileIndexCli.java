@@ -56,6 +56,10 @@ public class FileIndexCli {
         } else {
             IndexChange changes = getIndexChanges(base, pathIndexFilter, hashNodeFilter, indexFile, index);
 
+            if (cmd.hasOption('n')) {
+                System.exit(0);
+            }
+
             if (changes.hasChanges()) {
                 addShutdownHook(done, () -> {
                     writeIndex(index, indexFile);
@@ -244,6 +248,7 @@ public class FileIndexCli {
         options.addOption("h", false, "Print this help");
         options.addOption("i", true, "Index file to store. Default is ~/" + DEFAULT_INDEX_DIR + "/<dirname>.index");
         options.addOption("q", false, "Quiet mode");
+        options.addOption("n", false, "Print changes only. Requires an existing file index");
         options.addOption(Option.builder()
                 .longOpt("output-limit")
                 .hasArg(true)
