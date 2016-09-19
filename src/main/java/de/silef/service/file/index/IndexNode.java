@@ -271,11 +271,7 @@ public class IndexNode implements Serializable {
         }
     }
 
-    public void setParent(IndexNode parent) {
-        this.parent = parent;
-    }
-
-    public void walk(Consumer<IndexNode> consumer) {
+    private void walk(Consumer<IndexNode> consumer) {
         consumer.accept(this);
 
         for (IndexNode child : children) {
@@ -284,12 +280,12 @@ public class IndexNode implements Serializable {
     }
 
     public Stream<IndexNode> stream() {
-        Stream.Builder<IndexNode> builder = Stream.builder();
-        walk(builder);
-        return builder.build();
+        Stream.Builder<IndexNode> streamConsumer = Stream.builder();
+        walk(streamConsumer);
+        return streamConsumer.build();
     }
 
-    public void copyFrom(IndexNode other) {
+    void copyFrom(IndexNode other) {
         name = other.getName();
 
         mode = other.getMode();
