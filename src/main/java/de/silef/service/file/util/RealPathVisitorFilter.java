@@ -1,12 +1,19 @@
 package de.silef.service.file.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
 /**
  * Created by sebastian on 17.09.16.
  */
 public class RealPathVisitorFilter extends PathVisitor {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RealPathVisitorFilter.class);
 
     private Path base;
 
@@ -39,7 +46,15 @@ public class RealPathVisitorFilter extends PathVisitor {
     }
 
     private boolean doDelgate(Path path) throws IOException {
-        Path realPath = path.toRealPath();
-        return realPath.startsWith(base);
+        if (Files.isSymbolicLink(path)) {
+            try {
+                Path realPath = path.toRealPath();
+                return realPath.startsWith(base);
+            } catch (NoSuchFileException e) {
+                LOG.warn("Failed to resolve link: {}", path);
+                return false;
+            }
+        }
+        return true;
     }
 }
