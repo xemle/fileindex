@@ -62,7 +62,7 @@ For help use `-h` option:
     Following options are available:
      -h                           Print this help
      -i <arg>                     Index file to store. Default is
-                                  ~/.cache/filecache/<dirname>.index
+                                  ~/.cache/fileindex/<dirname>.index
      -M,--verify-max-size <arg>   Limit content integrity verification by file
                                   size. Use 0 to disable
         --output-limit <arg>      Limit change output printing. Default is 256

@@ -4,7 +4,6 @@ import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.index.*;
 import de.silef.service.file.util.ByteUtil;
 import org.apache.commons.cli.*;
-import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +11,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.*;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,6 +23,8 @@ import java.util.stream.Collectors;
 public class FileIndexCli {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileIndexCli.class);
+
+    private static final String DEFAULT_INDEX_DIR = ".cache/fileindex";
     private static final int CHANGE_OUTPUT_LIMIT = 256;
 
     private CommandLine cmd;
@@ -173,7 +173,7 @@ public class FileIndexCli {
             indexFile = Paths.get(cmd.getOptionValue("i"));
         } else {
             String indexName = base.toRealPath().getFileName() + ".index";
-            indexFile = Paths.get(System.getProperty("user.home")).resolve(".cache/filecache").resolve(indexName);
+            indexFile = Paths.get(System.getProperty("user.home")).resolve(DEFAULT_INDEX_DIR).resolve(indexName);
             LOG.debug("Use default index file: {}", indexFile);
         }
         Files.createDirectories(indexFile.getParent());
@@ -242,7 +242,7 @@ public class FileIndexCli {
         Options options = new Options();
 
         options.addOption("h", false, "Print this help");
-        options.addOption("i", true, "Index file to store. Default is ~/.cache/filecache/<dirname>.index");
+        options.addOption("i", true, "Index file to store. Default is ~/" + DEFAULT_INDEX_DIR + "/<dirname>.index");
         options.addOption("q", false, "Quiet mode");
         options.addOption(Option.builder()
                 .longOpt("output-limit")
