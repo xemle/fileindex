@@ -1,6 +1,7 @@
 package de.silef.service.file.test;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 
@@ -9,8 +10,13 @@ import java.nio.file.attribute.BasicFileAttributes;
  */
 public class PathUtils {
 
+    private static final String OS_NAME = System.getProperty( "os.name" );
+    private static final boolean IS_WINDOWS = OS_NAME.contains( "indow" );
+    
     public static Path getResourcePath(String resourceName) {
-        return Paths.get(PathUtils.class.getClassLoader().getResource(resourceName).getFile());
+        final String fileString = PathUtils.class.getClassLoader().getResource(resourceName).getFile();
+        final String osClearedfileString = IS_WINDOWS ? fileString.substring(1) : fileString;
+        return Paths.get(osClearedfileString);
     }
 
     public static void copy(Path source, Path target) throws IOException {

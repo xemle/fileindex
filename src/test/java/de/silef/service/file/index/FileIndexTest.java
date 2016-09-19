@@ -3,6 +3,7 @@ package de.silef.service.file.index;
 import de.silef.service.file.util.HashUtil;
 import de.silef.service.file.test.BasePathTest;
 import de.silef.service.file.test.PathUtils;
+import java.io.File;
 import org.junit.Test;
 
 import java.io.IOException;
