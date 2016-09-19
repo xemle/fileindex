@@ -58,13 +58,14 @@ files more than 10 MB are not calculated.
 For help use `-h` option:
  
     usage: fileindex <options> [path]
-    
+
     Following options are available:
      -h                           Print this help
      -i <arg>                     Index file to store. Default is
                                   ~/.cache/filecache/<dirname>.index
-     -M,--verify-max-size <arg>   Limit content integrity verification 
-                                  file by size. Use 0 to disable
+     -M,--verify-max-size <arg>   Limit content integrity verification by file
+                                  size. Use 0 to disable
+        --output-limit <arg>      Limit change output printing. Default is 256
      -q                           Quiet mode
     
     Please consult fileindex.log for detailed program information

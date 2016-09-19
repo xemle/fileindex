@@ -4,6 +4,7 @@ import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.index.*;
 import de.silef.service.file.util.ByteUtil;
 import org.apache.commons.cli.*;
+import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.*;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 public class FileIndexCli {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileIndexCli.class);
+    private static final int CHANGE_OUTPUT_LIMIT = 256;
 
     private CommandLine cmd;
 
@@ -192,8 +195,9 @@ public class FileIndexCli {
             return;
         }
         long totalChange = changes.getCreated().size() + changes.getModified().size() + changes.getRemoved().size();
-        if (totalChange > 256) {
-            System.out.println("Too many changes: " + totalChange + " modifications. Skip printing");
+
+        if (totalChange > getChangeOutputLimit()) {
+            System.out.println("Too many changes: " + totalChange + " modifications. Skip printing. Change it by --output-limit option");
             return;
         }
         List<String> lines = new LinkedList<>();
@@ -205,6 +209,19 @@ public class FileIndexCli {
         lines.stream()
                 .sorted((a, b) -> a.substring(3).compareTo(b.substring(3)))
                 .forEach(System.out::println);
+    }
+
+    private long getChangeOutputLimit() {
+        if (!cmd.hasOption("output-limit")) {
+            return CHANGE_OUTPUT_LIMIT;
+        }
+        try {
+            return Long.parseLong(cmd.getOptionValue("output-limit"));
+        } catch (NumberFormatException e) {
+            System.err.println("Invalid change output limit. Use default " + CHANGE_OUTPUT_LIMIT);
+            LOG.warn("Invalid change output limit", e);
+            return CHANGE_OUTPUT_LIMIT;
+        }
     }
 
     private List<String> createLines(String prefix, Collection<IndexNode> nodes) {
@@ -227,6 +244,11 @@ public class FileIndexCli {
         options.addOption("h", false, "Print this help");
         options.addOption("i", true, "Index file to store. Default is ~/.cache/filecache/<dirname>.index");
         options.addOption("q", false, "Quiet mode");
+        options.addOption(Option.builder()
+                .longOpt("output-limit")
+                .hasArg(true)
+                .desc("Limit change output printing. Default is " + CHANGE_OUTPUT_LIMIT)
+                .build());
         options.addOption(Option.builder("M")
                 .longOpt("verify-max-size")
                 .hasArg(true)
