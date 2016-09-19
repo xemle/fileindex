@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -126,7 +127,7 @@ public class FileIndexCli {
         try {
             tmp = indexFile.getParent().resolve(indexFile.getFileName() + ".tmp");
             new IndexNodeWriter().write(index.getRoot(), tmp);
-            Files.move(tmp, indexFile);
+            Files.move(tmp, indexFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
             if (tmp != null) {
                 Files.delete(tmp);
