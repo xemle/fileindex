@@ -2,9 +2,7 @@ package de.silef.service.file.index;
 
 import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.hash.HashUtil;
-import de.silef.service.file.tree.PathWalker;
-import de.silef.service.file.tree.*;
-import de.silef.service.file.util.*;
+import de.silef.service.file.util.ByteUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +32,7 @@ public class FileIndex {
     }
 
     public FileIndex(Path base, Predicate<Path> indexPathFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
-        this(base, build(base, indexPathFilter), indexPathFilter, hashNodeFilter);
+        this(base, IndexNodeCreator.create(base, indexPathFilter), indexPathFilter, hashNodeFilter);
     }
 
     public FileIndex(Path base, IndexNode root) {
@@ -46,31 +44,6 @@ public class FileIndex {
         this.root = root;
         this.indexPathFilter = indexPathFilter;
         this.hashNodeFilter = hashNodeFilter;
-    }
-
-    private static IndexNode build(Path base, Predicate<Path> indexPathFilter) throws IOException {
-        Visitor<Path> resolveLinkVisitor = new ResolveLinkVisitorFilter(base);
-        Visitor<Path> filterVisitor = new VisitorFilter<>(indexPathFilter);
-        IndexNodeVisitor nodeVisitor = new IndexNodeVisitor();
-        VisitorChain<Path> visitorChain = new VisitorChain<>(resolveLinkVisitor, filterVisitor, nodeVisitor);
-
-        Visitor<Path> suppressErrorVisitor = new SuppressErrorPathVisitor<>(visitorChain);
-        PathWalker.walk(base, suppressErrorVisitor);
-
-        IndexNode root = nodeVisitor.getRoot();
-        calculateRootHash(root);
-        return root;
-    }
-
-    private static void calculateRootHash(IndexNode root) {
-        resetAllDirecoryHashes(root);
-        root.getHash();
-    }
-
-    private static void resetAllDirecoryHashes(IndexNode root) {
-        root.stream()
-                .filter(n -> n.getMode() == FileMode.DIRECTORY)
-                .forEach(IndexNode::resetHashesToRootNode);
     }
 
     public void initializeTreeHash() throws IOException {
