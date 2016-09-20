@@ -26,11 +26,11 @@ public class IndexNodeCreator {
     }
 
     private static void calculateRootHash(IndexNode root) {
-        resetAllDirecoryHashes(root);
+        resetAllDirectoryHashes(root);
         root.getHash();
     }
 
-    private static void resetAllDirecoryHashes(IndexNode root) {
+    private static void resetAllDirectoryHashes(IndexNode root) {
         root.stream()
                 .filter(n -> n.getMode() == FileMode.DIRECTORY)
                 .forEach(IndexNode::resetHashesToRootNode);
