@@ -5,7 +5,9 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -51,13 +53,22 @@ public class PathWalker {
     }
 
     private static Comparator<Path> sortByModeAndName() {
+        Map<Path, Boolean> isDirCache = new HashMap<>();
         return (a, b) -> {
-            if (Files.isDirectory(a) && !Files.isDirectory(b)) {
+            if (!isDirCache.containsKey(a)) {
+                isDirCache.put(a, Files.isDirectory(a));
+            }
+            if (!isDirCache.containsKey(b)) {
+                isDirCache.put(b, Files.isDirectory(b));
+            }
+            boolean isADir = isDirCache.get(a);
+            boolean isBDir = isDirCache.get(b);
+            if (isADir && !isBDir) {
                 return -1;
-            } else if (!Files.isDirectory(a) && Files.isDirectory(b)) {
+            } else if (!isADir && isBDir) {
                 return 1;
             } else {
-                return a.getFileName().compareTo(b.getFileName());
+                return a.compareTo(b);
             }
         };
     }
