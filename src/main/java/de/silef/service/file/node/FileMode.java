@@ -1,6 +1,4 @@
-package de.silef.service.file.index;
-
-import com.sun.org.apache.bcel.internal.generic.FMUL;
+package de.silef.service.file.node;
 
 /**
  * See man 2 stat for description
@@ -39,7 +37,7 @@ public enum FileMode {
         return value == DIRECTORY.value;
     }
 
-    boolean sameFileType(FileMode other) {
+    public boolean sameFileType(FileMode other) {
         return value != OTHER.value && value == other.value;
     }
 }

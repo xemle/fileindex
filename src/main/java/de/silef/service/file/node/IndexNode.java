@@ -1,4 +1,4 @@
-package de.silef.service.file.index;
+package de.silef.service.file.node;
 
 import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.hash.HashUtil;
@@ -16,11 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static de.silef.service.file.tree.Visitor.VisitorResult.SKIP;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -229,7 +225,7 @@ public class IndexNode implements Serializable {
         return new ArrayList<>(children);
     }
 
-    void addChild(IndexNode node) {
+    public void addChild(IndexNode node) {
         IndexNode oldNode = nameToChild.put(node.getName(), node);
         children.remove(oldNode);
         children.add(node);
@@ -264,7 +260,7 @@ public class IndexNode implements Serializable {
         return relativePath;
     }
 
-    void resetHashesToRootNode() {
+    public void resetHashesToRootNode() {
         if (hash == null) {
             return;
         }
@@ -293,7 +289,7 @@ public class IndexNode implements Serializable {
         return streamConsumer.build();
     }
 
-    void copyFrom(IndexNode other) {
+    public void copyFrom(IndexNode other) {
         name = other.getName();
 
         mode = other.getMode();

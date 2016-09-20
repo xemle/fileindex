@@ -1,5 +1,9 @@
-package de.silef.service.file.index;
+package de.silef.service.file.node;
 
+import de.silef.service.file.index.FileIndex;
+import de.silef.service.file.node.IndexNode;
+import de.silef.service.file.node.IndexNodeReader;
+import de.silef.service.file.node.IndexNodeWriter;
 import de.silef.service.file.test.BasePathTest;
 import de.silef.service.file.test.PathUtils;
 import org.junit.Test;

@@ -1,11 +1,11 @@
-package de.silef.service.file.index;
+package de.silef.service.file.node;
 
 import java.io.*;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.zip.DeflaterOutputStream;
 
-import static de.silef.service.file.index.IndexNode.MAGIC_HEADER;
+import static de.silef.service.file.node.IndexNode.MAGIC_HEADER;
 
 /**
  * Created by sebastian on 17.09.16.

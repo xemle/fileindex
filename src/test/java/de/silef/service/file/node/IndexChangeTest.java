@@ -1,6 +1,9 @@
-package de.silef.service.file.index;
+package de.silef.service.file.node;
 
 import de.silef.service.file.hash.FileHash;
+import de.silef.service.file.index.FileIndex;
+import de.silef.service.file.index.IndexChange;
+import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.test.BasePathTest;
 import de.silef.service.file.test.PathUtils;
 import org.junit.Test;
@@ -9,7 +12,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.core.Is.is;

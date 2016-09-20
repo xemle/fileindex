@@ -2,6 +2,8 @@ package de.silef.service.file.index;
 
 import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.hash.HashUtil;
+import de.silef.service.file.node.FileMode;
+import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.test.BasePathTest;
 import de.silef.service.file.test.PathUtils;
 import org.junit.Before;

@@ -1,4 +1,4 @@
-package de.silef.service.file.index;
+package de.silef.service.file.node;
 
 import de.silef.service.file.hash.FileHash;
 
@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.InflaterInputStream;
 
-import static de.silef.service.file.index.IndexNode.MAGIC_HEADER;
+import static de.silef.service.file.node.IndexNode.MAGIC_HEADER;
 
 /**
  * Created by sebastian on 17.09.16.

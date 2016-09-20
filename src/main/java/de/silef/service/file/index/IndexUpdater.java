@@ -1,5 +1,7 @@
 package de.silef.service.file.index;
 
+import de.silef.service.file.node.FileMode;
+import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.util.ByteUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

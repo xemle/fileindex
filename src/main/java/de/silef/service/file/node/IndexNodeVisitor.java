@@ -1,4 +1,4 @@
-package de.silef.service.file.index;
+package de.silef.service.file.node;
 
 import de.silef.service.file.tree.Visitor;
 

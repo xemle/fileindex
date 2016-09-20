@@ -2,6 +2,10 @@ package de.silef.service.file;
 
 import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.index.*;
+import de.silef.service.file.node.FileMode;
+import de.silef.service.file.node.IndexNode;
+import de.silef.service.file.node.IndexNodeReader;
+import de.silef.service.file.node.IndexNodeWriter;
 import de.silef.service.file.util.ByteUtil;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
