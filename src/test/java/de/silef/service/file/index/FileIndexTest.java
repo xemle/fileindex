@@ -1,6 +1,6 @@
 package de.silef.service.file.index;
 
-import de.silef.service.file.hash.HashUtil;
+import de.silef.service.file.util.HashUtil;
 import de.silef.service.file.test.BasePathTest;
 import de.silef.service.file.test.PathUtils;
 import org.junit.Test;

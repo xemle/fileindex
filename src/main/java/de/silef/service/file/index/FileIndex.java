@@ -1,7 +1,7 @@
 package de.silef.service.file.index;
 
 import de.silef.service.file.hash.FileHash;
-import de.silef.service.file.hash.HashUtil;
+import de.silef.service.file.util.HashUtil;
 import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.node.IndexNodeCreator;
 import de.silef.service.file.util.ByteUtil;

@@ -1,5 +1,7 @@
 package de.silef.service.file.hash;
 
+import de.silef.service.file.util.HashUtil;
+
 import java.util.Arrays;
 
 /**

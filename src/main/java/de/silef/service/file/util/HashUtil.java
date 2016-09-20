@@ -1,4 +1,4 @@
-package de.silef.service.file.hash;
+package de.silef.service.file.util;
 
 import java.io.*;
 import java.nio.file.Path;

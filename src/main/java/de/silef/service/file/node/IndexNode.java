@@ -1,7 +1,7 @@
 package de.silef.service.file.node;
 
 import de.silef.service.file.hash.FileHash;
-import de.silef.service.file.hash.HashUtil;
+import de.silef.service.file.util.HashUtil;
 import de.silef.service.file.tree.Visitor;
 
 import java.io.ByteArrayOutputStream;

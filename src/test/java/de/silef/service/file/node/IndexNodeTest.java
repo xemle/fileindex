@@ -1,9 +1,7 @@
 package de.silef.service.file.node;
 
 import de.silef.service.file.hash.FileHash;
-import de.silef.service.file.hash.HashUtil;
-import de.silef.service.file.node.FileMode;
-import de.silef.service.file.node.IndexNode;
+import de.silef.service.file.util.HashUtil;
 import de.silef.service.file.test.PathUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
