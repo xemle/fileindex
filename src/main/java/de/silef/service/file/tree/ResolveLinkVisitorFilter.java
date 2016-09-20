@@ -1,4 +1,4 @@
-package de.silef.service.file.util;
+package de.silef.service.file.tree;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,13 +11,13 @@ import java.nio.file.Path;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class ResolveLinkPathVisitorFilter extends PathVisitor {
+public class ResolveLinkVisitorFilter extends Visitor<Path> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ResolveLinkPathVisitorFilter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ResolveLinkVisitorFilter.class);
 
     private Path base;
 
-    public ResolveLinkPathVisitorFilter(Path base) throws IOException {
+    public ResolveLinkVisitorFilter(Path base) throws IOException {
         this.base = base.toRealPath();
     }
 

@@ -2,6 +2,8 @@ package de.silef.service.file.index;
 
 import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.hash.HashUtil;
+import de.silef.service.file.tree.PathWalker;
+import de.silef.service.file.tree.*;
 import de.silef.service.file.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,12 +49,12 @@ public class FileIndex {
     }
 
     private static IndexNode build(Path base, Predicate<Path> indexPathFilter) throws IOException {
-        PathVisitor resolveLinkPathVisitor = new ResolveLinkPathVisitorFilter(base);
-        PathVisitor filterVisitor = new PathVisitorFilter(indexPathFilter);
-        IndexPathVisitor nodeVisitor = new IndexPathVisitor();
-        PathVisitorChain visitorChain = new PathVisitorChain(resolveLinkPathVisitor, filterVisitor, nodeVisitor);
+        Visitor<Path> resolveLinkVisitor = new ResolveLinkVisitorFilter(base);
+        Visitor<Path> filterVisitor = new VisitorFilter<>(indexPathFilter);
+        IndexNodeVisitor nodeVisitor = new IndexNodeVisitor();
+        VisitorChain<Path> visitorChain = new VisitorChain<>(resolveLinkVisitor, filterVisitor, nodeVisitor);
 
-        PathVisitor suppressErrorVisitor = new SuppressErrorPathVisitor(visitorChain);
+        Visitor<Path> suppressErrorVisitor = new SuppressErrorPathVisitor<>(visitorChain);
         PathWalker.walk(base, suppressErrorVisitor);
 
         IndexNode root = nodeVisitor.getRoot();

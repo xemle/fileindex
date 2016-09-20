@@ -1,12 +1,11 @@
-package de.silef.service.file.util;
+package de.silef.service.file.tree;
 
 import java.io.IOException;
-import java.nio.file.Path;
 
 /**
  * Created by sebastian on 17.09.16.
  */
-public class PathVisitor {
+public class Visitor<T> {
     public enum VisitorResult { CONTINUE, SKIP };
 
     /**
@@ -16,15 +15,15 @@ public class PathVisitor {
      * @return If SKIP is returned, no further action for this subbranch will be taken
      * @throws IOException
      */
-    public VisitorResult preVisitDirectory(Path dir) throws IOException {
+    public VisitorResult preVisitDirectory(T dir) throws IOException {
         return VisitorResult.CONTINUE;
     }
 
-    public VisitorResult visitFile(Path file) throws IOException {
+    public VisitorResult visitFile(T file) throws IOException {
         return VisitorResult.CONTINUE;
     }
 
-    public VisitorResult postVisitDirectory(Path dir) throws IOException {
+    public VisitorResult postVisitDirectory(T dir) throws IOException {
         return VisitorResult.CONTINUE;
     }
 

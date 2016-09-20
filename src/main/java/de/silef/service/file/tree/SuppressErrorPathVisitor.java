@@ -1,28 +1,26 @@
-package de.silef.service.file.util;
+package de.silef.service.file.tree;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Path;
 
 /**
  * Created by sebastian on 17.09.16.
  */
-public class SuppressErrorPathVisitor extends PathVisitor {
+public class SuppressErrorPathVisitor<T> extends Visitor<T> {
 
     private static final Logger LOG = LoggerFactory.getLogger(SuppressErrorPathVisitor.class);
 
-    private PathVisitor delegate;
+    private Visitor<T> delegate;
 
-    public SuppressErrorPathVisitor(PathVisitor delegate) {
-        this.delegate = delegate;
+    public SuppressErrorPathVisitor(Visitor<T> delegate) { this.delegate = delegate;
     }
 
     @Override
-    public VisitorResult preVisitDirectory(Path dir) throws IOException {
+    public VisitorResult preVisitDirectory(T path) throws IOException {
         try {
-            return delegate.preVisitDirectory(dir);
+            return delegate.preVisitDirectory(path);
         } catch (IOException e) {
             LOG.info("Suppress error: {}", e.getMessage(), e);
             return VisitorResult.SKIP;
@@ -30,7 +28,7 @@ public class SuppressErrorPathVisitor extends PathVisitor {
     }
 
     @Override
-    public VisitorResult visitFile(Path file) throws IOException {
+    public VisitorResult visitFile(T file) throws IOException {
         try {
             return delegate.visitFile(file);
         } catch (IOException e) {
@@ -40,7 +38,7 @@ public class SuppressErrorPathVisitor extends PathVisitor {
     }
 
     @Override
-    public VisitorResult postVisitDirectory(Path file) throws IOException {
+    public VisitorResult postVisitDirectory(T file) throws IOException {
         try {
             return delegate.postVisitDirectory(file);
         } catch (IOException e) {

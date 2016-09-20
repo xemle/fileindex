@@ -1,7 +1,6 @@
-package de.silef.service.file.util;
+package de.silef.service.file.tree;
 
 import java.io.IOException;
-import java.nio.file.Path;
 
 /**
  * For preVisitDirectory and visitFile call visitors in forward direction. On postVisitDirectory
@@ -9,18 +8,19 @@ import java.nio.file.Path;
  *
  * Created by sebastian on 19.09.16.
  */
-public class PathVisitorChain extends PathVisitor {
+public class VisitorChain<T> extends Visitor<T> {
 
-    private PathVisitor[] visitors;
+    private Visitor<T>[] visitors;
 
-    public PathVisitorChain(PathVisitor... visitors) {
+    @SafeVarargs
+    public VisitorChain(Visitor<T>... visitors) {
         this.visitors = visitors;
     }
 
     @Override
-    public VisitorResult preVisitDirectory(Path dir) throws IOException {
+    public VisitorResult preVisitDirectory(T dir) throws IOException {
         VisitorResult result = VisitorResult.CONTINUE;
-        for (PathVisitor visitor : visitors) {
+        for (Visitor<T> visitor : visitors) {
             result = visitor.preVisitDirectory(dir);
             if (result != VisitorResult.CONTINUE) {
                 return result;
@@ -30,9 +30,9 @@ public class PathVisitorChain extends PathVisitor {
     }
 
     @Override
-    public VisitorResult visitFile(Path file) throws IOException {
+    public VisitorResult visitFile(T file) throws IOException {
         VisitorResult result = VisitorResult.CONTINUE;
-        for (PathVisitor visitor : visitors) {
+        for (Visitor<T> visitor : visitors) {
             result = visitor.visitFile(file);
             if (result != VisitorResult.CONTINUE) {
                 return result;
@@ -42,10 +42,10 @@ public class PathVisitorChain extends PathVisitor {
     }
 
     @Override
-    public VisitorResult postVisitDirectory(Path dir) throws IOException {
+    public VisitorResult postVisitDirectory(T dir) throws IOException {
         VisitorResult result = VisitorResult.CONTINUE;
         for (int i = visitors.length - 1; i >= 0; i--) {
-            PathVisitor visitor = visitors[i];
+            Visitor<T> visitor = visitors[i];
             result = visitor.postVisitDirectory(dir);
             if (result != VisitorResult.CONTINUE) {
                 return result;

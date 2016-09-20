@@ -1,6 +1,4 @@
-package de.silef.service.file.util;
-
-import de.silef.service.file.util.PathVisitor.VisitorResult;
+package de.silef.service.file.tree;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -10,19 +8,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static de.silef.service.file.util.PathVisitor.VisitorResult.CONTINUE;
-
 /**
  * Created by sebastian on 17.09.16.
  */
 public class PathWalker {
 
-    public static void walk(Path base, PathVisitor pathVisitor) throws IOException {
+    public static void walk(Path base, Visitor<? super Path> visitor) throws IOException {
         if (!Files.isDirectory(base)) {
             return;
         }
-        VisitorResult result = pathVisitor.preVisitDirectory(base);
-        if (result != CONTINUE) {
+        Visitor.VisitorResult result = visitor.preVisitDirectory(base);
+        if (result != Visitor.VisitorResult.CONTINUE) {
             return;
         }
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(base)) {
@@ -33,13 +29,13 @@ public class PathWalker {
                 }
 
                 if (Files.isDirectory(path)) {
-                    walk(path, pathVisitor);
+                    walk(path, visitor);
                 } else {
-                    pathVisitor.visitFile(path);
+                    visitor.visitFile(path);
                 }
             }
         }
-        pathVisitor.postVisitDirectory(base);
+        visitor.postVisitDirectory(base);
     }
 
 }

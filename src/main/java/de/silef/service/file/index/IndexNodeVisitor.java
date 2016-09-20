@@ -1,6 +1,6 @@
 package de.silef.service.file.index;
 
-import de.silef.service.file.util.PathVisitor;
+import de.silef.service.file.tree.Visitor;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class IndexPathVisitor extends PathVisitor {
+public class IndexNodeVisitor extends Visitor<Path> {
 
     private List<IndexNode> parentStack;
 
@@ -21,7 +21,7 @@ public class IndexPathVisitor extends PathVisitor {
 
     private IndexNode lastDirNode;
 
-    public IndexPathVisitor() throws IOException {
+    public IndexNodeVisitor() throws IOException {
         parentStack = new ArrayList<>();
     }
 
