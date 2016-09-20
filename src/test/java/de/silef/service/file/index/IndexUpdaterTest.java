@@ -65,7 +65,7 @@ public class IndexUpdaterTest extends BasePathTest {
 
 
         String updatedRootHash = HashUtil.toHex(index.getRoot().getHash().getBytes());
-        assertThat(updatedRootHash, is("9a39057eeb25a1de928bd0d2f0281d5285e98ea7"));
+        assertThat(updatedRootHash, is("df42942a34b3feea416126e39d0a2b7a1c6611e6"));
     }
 
     @Test
@@ -77,7 +77,7 @@ public class IndexUpdaterTest extends BasePathTest {
 
 
         String updatedRootHash = HashUtil.toHex(index.getRoot().getHash().getBytes());
-        assertThat(updatedRootHash, is("cbbec5437b4d14184b31bd276c9ce3ceafa54d32"));
+        assertThat(updatedRootHash, is("70b49ac758924e8771bfcbedcaaf8901d354666f"));
     }
 
     @Test
@@ -89,7 +89,7 @@ public class IndexUpdaterTest extends BasePathTest {
 
 
         String updatedRootHash = HashUtil.toHex(index.getRoot().getHash().getBytes());
-        assertThat(updatedRootHash, is("08d99ac6d1e6e89d359890c11f85b3ed0376dcd3"));
+        assertThat(updatedRootHash, is("fe2268f3a1950493a9d5dc1cb133640fc26696f3"));
     }
 
     private void givenFile(String path, String content) throws IOException {

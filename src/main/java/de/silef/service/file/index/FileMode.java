@@ -35,6 +35,10 @@ public enum FileMode {
         }
     }
 
+    public boolean isDirectory() {
+        return value == DIRECTORY.value;
+    }
+
     boolean sameFileType(FileMode other) {
         return value != OTHER.value && value == other.value;
     }

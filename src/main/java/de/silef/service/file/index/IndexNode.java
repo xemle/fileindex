@@ -2,6 +2,7 @@ package de.silef.service.file.index;
 
 import de.silef.service.file.hash.FileHash;
 import de.silef.service.file.hash.HashUtil;
+import de.silef.service.file.tree.Visitor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -16,7 +17,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static de.silef.service.file.tree.Visitor.VisitorResult.SKIP;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -271,17 +275,21 @@ public class IndexNode implements Serializable {
         }
     }
 
-    private void walk(Consumer<IndexNode> consumer) {
-        consumer.accept(this);
-
-        for (IndexNode child : children) {
-            child.walk(consumer);
-        }
-    }
-
     public Stream<IndexNode> stream() {
         Stream.Builder<IndexNode> streamConsumer = Stream.builder();
-        walk(streamConsumer);
+        IndexNodeWalker.walk(this, new Visitor<IndexNode>() {
+            @Override
+            public VisitorResult preVisitDirectory(IndexNode dir) throws IOException {
+                streamConsumer.accept(dir);
+                return super.preVisitDirectory(dir);
+            }
+
+            @Override
+            public VisitorResult visitFile(IndexNode file) throws IOException {
+                streamConsumer.accept(file);
+                return super.visitFile(file);
+            }
+        });
         return streamConsumer.build();
     }
 
