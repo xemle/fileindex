@@ -1,18 +1,23 @@
 package de.silef.service.file.index;
 
-import de.silef.service.file.hash.FileHash;
-import de.silef.service.file.util.HashUtil;
-import de.silef.service.file.node.IndexNode;
-import de.silef.service.file.node.IndexNodeCreator;
-import de.silef.service.file.util.ByteUtil;
+import de.silef.service.file.change.IndexChange;
+import de.silef.service.file.change.IndexNodeChange;
+import de.silef.service.file.change.IndexNodeChangeAnalyser;
+import de.silef.service.file.change.IndexNodeChangeVisitor;
+import de.silef.service.file.extension.BasicFileIndexExtension;
+import de.silef.service.file.extension.ExtensionType;
+import de.silef.service.file.node.*;
+import de.silef.service.file.path.IndexNodePathFactory;
+import de.silef.service.file.path.IndexNodeVisitor;
+import de.silef.service.file.path.ResolveLinkVisitorFilter;
+import de.silef.service.file.tree.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -25,80 +30,66 @@ public class FileIndex {
 
     private IndexNode root;
 
-    private Predicate<Path> indexPathFilter;
-
-    private Predicate<IndexNode> hashNodeFilter;
-
-    public FileIndex(Path base) throws IOException {
-        this(base, p -> true, n -> true);
-    }
-
-    public FileIndex(Path base, Predicate<Path> indexPathFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
-        this(base, IndexNodeCreator.create(base, indexPathFilter), indexPathFilter, hashNodeFilter);
-    }
-
-    public FileIndex(Path base, IndexNode root) {
-        this(base, root, p -> true, n -> true);
-    }
-
-    public FileIndex(Path base, IndexNode root, Predicate<Path> indexPathFilter, Predicate<IndexNode> hashNodeFilter) {
+    public FileIndex(Path base, IndexNode root) throws IOException {
         this.base = base;
         this.root = root;
-        this.indexPathFilter = indexPathFilter;
-        this.hashNodeFilter = hashNodeFilter;
     }
 
-    public void initializeTreeHash() throws IOException {
-        IndexNode emptyRoot = IndexNode.createRootFromPath(base);
-        IndexChange change = IndexChange.create(base, root, emptyRoot);
-        LOG.info("Initialize file index with {} files of {}", getTotalFileCount(), ByteUtil.toHumanSize(getTotalFileSize()));
-        updateChanges(change, false);
+    public static FileIndex create(Path base, IndexNodePathFactory nodePathFactory) throws IOException {
+        return create(base, p -> true, nodePathFactory);
     }
 
-    public IndexChange getChanges() throws IOException {
-        FileIndex current = new FileIndex(base, indexPathFilter, hashNodeFilter);
-        return current.getChanges(this);
+    public static FileIndex create(Path base, ImportPathFilter pathFilter, IndexNodePathFactory nodePathFactory) throws IOException {
+        Visitor<Path> resolveLinkVisitor = new ResolveLinkVisitorFilter(base);
+        Visitor<Path> filterVisitor = new VisitorFilter<>(pathFilter::importPath);
+        IndexNodeVisitor nodeVisitor = new IndexNodeVisitor(nodePathFactory);
+        VisitorChain<Path> visitorChain = new VisitorChain<>(resolveLinkVisitor, filterVisitor, nodeVisitor);
+
+        Visitor<Path> suppressErrorVisitor = new SuppressErrorPathVisitor<>(visitorChain);
+        PathWalker.walk(base, suppressErrorVisitor);
+
+        return new FileIndex(base, nodeVisitor.getRoot());
     }
 
-    public IndexChange getChanges(FileIndex other) {
-        return IndexChange.create(base, this.getRoot(), other.getRoot());
+    public static FileIndex readFromPath(Path base, Path indexfile, IndexNodeFactory nodeFactory) throws IOException {
+        IndexNode root = new IndexNodeReader(nodeFactory).read(base, indexfile);
+        return new FileIndex(base, root);
     }
 
-    public void update() throws IOException {
-        update(false);
+    public IndexChange getChanges(FileIndex other, IndexNodeChangeAnalyser changePredicate) {
+        IndexNodeChangeVisitor visitor = new IndexNodeChangeVisitor(root, changePredicate);
+        IndexNodeWalker.walk(other.getRoot(), visitor);
+        return new IndexChange(base, visitor.getChanges());
     }
 
-    public void update(boolean suppressErrors) throws IOException {
-        updateChanges(getChanges(), suppressErrors);
-    }
+    public void applyChanges(IndexChange change) {
+        if (!change.hasChanges()) {
+            return;
+        }
 
-    public void updateChanges(IndexChange change, boolean suppressErrors) throws IOException {
-        LOG.debug("Updating index with change: {}", change);
-        new IndexUpdater(base, root).update(change, createHashUpdater(), suppressErrors);
-    }
+        List<IndexNodeChange> changes = change.getChanges().stream()
+                .sorted((a, b) -> b.getChange().compareTo(a.getChange()))
+                .collect(Collectors.toList());
+        for (IndexNodeChange nodeChange : changes) {
+            IndexNode primaryNode = nodeChange.getPrimary();
+            IndexNode otherNode = nodeChange.getOther();
 
-    private Consumer<IndexNode> createHashUpdater() {
-        return node -> {
-                if (!hashNodeFilter.test(node)) {
-                    return;
+            if (nodeChange.getChange() == IndexNodeChange.Change.CREATED) {
+                if (otherNode.isDirectory()) {
+                    primaryNode.addChild(otherNode);
+                } else {
+                    primaryNode.getParent().addChild(otherNode);
                 }
-                Path file = base.resolve(node.getRelativePath());
-                if (!Files.isSymbolicLink(file) && !Files.isRegularFile(file)) {
-                    return;
-                }
-                try {
-                    byte[] hash;
-                    if (Files.isRegularFile(file)) {
-                        hash = HashUtil.getHash(file);
-                    } else {
-                        Path link = Files.readSymbolicLink(file);
-                        hash = HashUtil.getHash(link.toString().getBytes());
-                    }
-                    node.setHash(new FileHash(hash));
-                } catch (IOException e) {
-                    LOG.warn("Could not update content hash from {}", file);
-                }
-            };
+            } else if (nodeChange.getChange() == IndexNodeChange.Change.MODIFIED) {
+                primaryNode.getParent().addChild(otherNode);
+            } else if (nodeChange.getChange() == IndexNodeChange.Change.REMOVED) {
+                primaryNode.getParent().removeChildByName(otherNode.getName());
+            }
+        }
+    }
+
+    public void writeToPath(Path indexfile) throws IOException {
+        new IndexNodeWriter().write(getRoot(), indexfile);
     }
 
     public IndexNode getRoot() {
@@ -106,7 +97,10 @@ public class FileIndex {
     }
 
     public long getTotalFileSize() {
-        return root.stream().map(IndexNode::getSize).reduce(0L, (a, b) -> a + b);
+        return root.stream()
+                .filter(n -> n.hasExtensionType(ExtensionType.BASIC_FILE.value))
+                .map(n -> ((BasicFileIndexExtension) n.getExtensionByType(ExtensionType.BASIC_FILE.value)).getSize())
+                .reduce(0L, (a, b) -> a + b);
     }
 
     public long getTotalFileCount() {

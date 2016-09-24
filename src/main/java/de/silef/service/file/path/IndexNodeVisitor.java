@@ -1,28 +1,30 @@
-package de.silef.service.file.node;
+package de.silef.service.file.path;
 
+import de.silef.service.file.node.IndexNode;
+import de.silef.service.file.path.IndexNodePathFactory;
 import de.silef.service.file.tree.Visitor;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by sebastian on 17.09.16.
  */
 public class IndexNodeVisitor extends Visitor<Path> {
 
-    private List<IndexNode> parentStack;
+    private Stack<IndexNode> parentStack;
 
     private Map<Path, List<IndexNode>> pathToChildren = new HashMap<>();
 
     private IndexNode lastDirNode;
 
-    public IndexNodeVisitor() throws IOException {
-        parentStack = new ArrayList<>();
+    private IndexNodePathFactory nodeFactory;
+
+    public IndexNodeVisitor(IndexNodePathFactory nodeFactory) throws IOException {
+        this.nodeFactory = nodeFactory;
+        parentStack = new Stack<>();
     }
 
     public IndexNode getRoot() {
@@ -37,15 +39,15 @@ public class IndexNodeVisitor extends Visitor<Path> {
 
         IndexNode node;
         if (parentStack.isEmpty()) {
-            node = IndexNode.createRootFromPath(path);
+            node = nodeFactory.createFromPath(null, path);
             pathToChildren.put(path, new ArrayList<>());
         } else {
-            IndexNode parent = parentStack.get(parentStack.size() - 1);
-            node = IndexNode.createFromPath(parent, path);
+            IndexNode parent = parentStack.peek();
+            node = nodeFactory.createFromPath(parent, path);
             pathToChildren.get(path.getParent()).add(node);
         }
 
-        parentStack.add(node);
+        parentStack.push(node);
         pathToChildren.put(path, new ArrayList<>());
         return super.preVisitDirectory(path);
     }
@@ -53,8 +55,8 @@ public class IndexNodeVisitor extends Visitor<Path> {
     @Override
     public VisitorResult visitFile(Path path) throws IOException {
         if (Files.isReadable(path)) {
-            IndexNode parent = parentStack.get(parentStack.size() - 1);
-            IndexNode child = IndexNode.createFromPath(parent, path);
+            IndexNode parent = parentStack.peek();
+            IndexNode child = nodeFactory.createFromPath(parent, path);
             pathToChildren.get(path.getParent()).add(child);
         }
         return super.visitFile(path);
@@ -62,7 +64,7 @@ public class IndexNodeVisitor extends Visitor<Path> {
 
     @Override
     public VisitorResult postVisitDirectory(Path dir) throws IOException {
-        lastDirNode = parentStack.remove(parentStack.size() - 1);
+        lastDirNode = parentStack.pop();
         List<IndexNode> children = pathToChildren.remove(dir);
         lastDirNode.setChildren(children);
         return super.postVisitDirectory(dir);

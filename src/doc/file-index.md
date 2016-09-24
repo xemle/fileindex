@@ -37,7 +37,49 @@ General structure:
 Single index node structure:
 
     +----------------+
-    |    4 bytes     |  File mode
+    |    1 byte      |  Node type
+    +----------------+
+    |    2 bytes     |  Length of name bytes
+    +----------------+
+    |    n bytes     |  Name (UTF-8)
+    |                |
+    +----------------+
+    |    1 byte      |  Extension count
+    +----------------+
+    |    n byte      |  Extensions
+    +----------------+
+    |    4 bytes     |  Children count, might be 0
+    +----------------+
+    +----------------+
+    |      ....      |  Index node as child node
+
+
+Index node types
+
+The index node type is one byte and defined as followed:
+
+    DIRECTORY 0x01
+    FILE      0x02
+    LINK      0x04
+    OTHER     0x00
+
+## Extension structure
+
+    +----------------+
+    |    1 byte      |  Extension type
+    +----------------+
+    |    2 bytes     |  Length of data
+    +----------------+
+    |    n bytes     |  Extension data
+    |                |
+    +----------------+
+
+### Basic File Extension
+
+    +----------------+
+    |    1 byte      |  Extension type = 0x01
+    +----------------+
+    |    2 bytes     |  Length of data = 24
     +----------------+
     |    8 bytes     |  File size
     |                |
@@ -48,73 +90,79 @@ Single index node structure:
     |    8 bytes     |  Modified timestamp
     |                |
     +----------------+
-    |    8 bytes     |  inode value or 0
-    |                |
-    +----------------+
-    |   20 bytes     |  Hash value
-    |                |
-    +----------------+
-    |    2 bytes     |  Length of name bytes
-    +----------------+
-    |    n bytes     |  Name (UTF-8)
-    |                |
-    +----------------+
-    |    4 bytes     |  Children count
-    +----------------+
-    +----------------+
-    |      ....      |  Index node as child node
-        
-        
-## Hash Value
 
-There are two types of hash calculations. For non directory nodes it is simple
-the SHA-1 hash of the file content.
+### Unix File Extension:
 
-For directory nodes, the checksum over the child entries are calculated. The 
-children are sorted by their names, lowest name first. Each child
-entry contains of its SHA-1 hash, the file mode, and the name in UTF-8.
- 
     +----------------+
-    |    20 bytes    |  SHA-1 hash bytes of node entry
-    |                |
-    |                |
+    |    1 byte      |  Extension type = 0x02
+    +----------------+
+    |    2 bytes     |  Length of data = 24
     +----------------+
     |    4 bytes     |  File mode
     |                |
     +----------------+
+    |    4 bytes     |  User id
+    |                |
+    +----------------+
+    |    4 bytes     |  Group id
+    |                |
+    +----------------+
+    |    8 bytes     |  Inode number
+    |                |
+    +----------------+
+    |    4 bytes     |  Link count
+    |                |
+    +----------------+
+
+### File Content Hash
+
+    +----------------+
+    |    1 byte      |  Extension type = 0x03
+    +----------------+
+    |    2 bytes     |  Length of data = 20
+    +----------------+
+    |   20 bytes     |  SHA1 Hash
+    |                |
+    +----------------+
+
+The File Content Hash is only file and symbolic links (including
+symbolic links of directories).
+
+The SHA1 hash is calculated by 8 bytes file size followed by the file 
+content. The file content for symbolic link is their link content.
+
+### Universal Hash
+
+    +----------------+
+    |    1 byte      |  Extension type = 0x04
+    +----------------+
+    |    2 bytes     |  Length of data = 20
+    +----------------+
+    |   20 bytes     |  SHA1 Hash
+    |                |
+    +----------------+
+
+The universal hash is only for directory index node types `0x01` (no symbolic 
+links). The universal hash is system and timestamp independent and offers
+a verification hash of file size, file content, and their directory structure. 
+The universal hash of a Windows directory has the same hash value as a Linux
+directory.
+  
+The SHA1 hash is calculated by the SHA1 hashes of the child nodes. The nodes
+are sorted by their names. For each child the hash data contains hash, node
+type and child name. If the child is a directory, the hash value is also a
+Universal hash. Otherwise it is the file content hash. If no file content
+hash extension is available, a zero hash value (`00000000000000000000` 
+as string) is assumed.
+
+    +----------------+
+    |   20 byte      |  Child hash
+    +----------------+
+    |    1 bytes     |  Index node type
+    +----------------+
     |    2 bytes     |  Length of name bytes
     +----------------+
     |    n bytes     |  Name (UTF-8)
     |                |
     +----------------+
-    +----------------+
-    |      ....      |  Next node entry
 
-## Entry File modes
-
-See `man (2) stat` for details. The Enums are defined as follow
-
-    FILE      (0100000),
-    LINK      (0120000),
-    DIRECTORY (0040000),
-    OTHER     (0000000);
-
-Currently the Unix file permissions are not considered.
-
-## Index File Size
-
-The estimated index file size can be calculated as follow:
-
-    size = (4 + r * f * (62 + n)) * z
-
-- `f` for number of files
-- `r` as ratio files per directory, 75 file per directory means `(75 + 1) / 75` with a ratio of 1.013.
-- `n` average filename length
-- `z` lzip compression ratio which is blow 0.5
-
-For 144240 files with 75 files per directory, average filename
-length of 15 and 0.5 compression ratio, the index file size is
-`(4 + 1.013 * 144240 * (62 + 15)) * 0.5 = 5627100B` about 5.36 MB.
-
-The index file size depends heavily on the file count and not on
-file sizes.

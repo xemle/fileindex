@@ -1,11 +1,16 @@
 package de.silef.service.file;
 
-import de.silef.service.file.hash.FileHash;
-import de.silef.service.file.index.*;
-import de.silef.service.file.node.FileMode;
-import de.silef.service.file.node.IndexNode;
-import de.silef.service.file.node.IndexNodeReader;
-import de.silef.service.file.node.IndexNodeWriter;
+import de.silef.service.file.change.IndexChange;
+import de.silef.service.file.change.IndexNodeChange;
+import de.silef.service.file.extension.BasicFileIndexExtension;
+import de.silef.service.file.extension.FileContentHashIndexExtension;
+import de.silef.service.file.extension.UniversalHashIndexExtension;
+import de.silef.service.file.index.FileIndex;
+import de.silef.service.file.index.ImportPathFilter;
+import de.silef.service.file.index.StandardFileIndexStrategy;
+import de.silef.service.file.node.*;
+import de.silef.service.file.path.IndexNodePathFactory;
+import de.silef.service.file.tree.Visitor;
 import de.silef.service.file.util.ByteUtil;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
@@ -16,11 +21,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static de.silef.service.file.extension.ExtensionType.BASIC_FILE;
+import static de.silef.service.file.extension.ExtensionType.FILE_HASH;
+import static de.silef.service.file.extension.ExtensionType.UNIVERSAL_HASH;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -42,47 +52,89 @@ public class FileIndexCli {
         Path base = getBase();
         Path indexFile = getIndexFile(base);
 
-        Predicate<Path> pathIndexFilter = p -> true;
-        Predicate<IndexNode> hashNodeFilter = getHashNodeFilter();
+        StandardFileIndexStrategy strategy = new StandardFileIndexStrategy();
 
         if (!Files.exists(indexFile)) {
-            createIndex(base, indexFile, pathIndexFilter, hashNodeFilter);
+            FileIndex index = initializeIndex(base, strategy, strategy);
+            updateContentHash(index, indexFile);
+            ensureUniveralHashOfRoot(index);
+            writeIndex(index, indexFile);
             return;
         }
 
-        FileIndex index = readIndex(base, indexFile, pathIndexFilter, hashNodeFilter);
-        IndexChange changes = getIndexChanges(index);
+        FileIndex index = readIndex(base, indexFile, strategy);
+        FileIndex currentIndex = initializeIndex(base, strategy, strategy);
+
+        IndexChange changes = index.getChanges(currentIndex, strategy);
+        printChange(changes);
 
         if (cmd.hasOption('n')) {
             System.exit(0);
         }
 
-        updateIndex(indexFile, index, changes);
+        index.applyChanges(changes);
+        updateContentHash(index, indexFile);
+        ensureUniveralHashOfRoot(index);
+        writeIndex(index, indexFile);
     }
 
-    private void createIndex(Path base, Path indexFile, Predicate<Path> pathIndexFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
-        FileIndex index = initializeIndex(base, pathIndexFilter, hashNodeFilter);
+    private void updateContentHash(FileIndex index, Path indexFile) throws IOException, java.text.ParseException {
         AtomicBoolean done = new AtomicBoolean();
         addShutdownHook(done, () -> {
+            ensureUniveralHashOfRoot(index);
             writeIndex(index, indexFile);
             return null;
         });
-        initializeTreeHash(index);
-        writeIndex(index, indexFile);
+        calculateFileContentHashes(index);
         done.set(true);
-        System.out.println("File index successfully created");
     }
 
-    private void initializeTreeHash(FileIndex index) throws IOException {
+    private void calculateFileContentHashes(FileIndex index) throws IOException, java.text.ParseException {
         LOG.info("Initializing file content hashes. This might take some time!");
-        index.initializeTreeHash();
+
+        long maxFileSize = cmd.hasOption('M') ? ByteUtil.toByte(cmd.getOptionValue('M')) : 0;
+        Predicate<IndexNode> calculateFilter = n -> {
+            BasicFileIndexExtension extension = (BasicFileIndexExtension) n.getExtensionByType(BASIC_FILE.value);
+            if (extension == null) {
+                return false;
+            }
+            long size = extension.getSize();
+            if (size > maxFileSize) {
+                LOG.info("File size exceeds hash calculation limit of {}: {} has file {}", ByteUtil.toHumanSize(maxFileSize), ByteUtil.toHumanSize(size), n.getRelativePath());
+                return false;
+            }
+            return true;
+        };
+
+        Path base = index.getBase();
+        IndexNodeWalker.walk(index.getRoot(), new Visitor<IndexNode>() {
+
+            @Override
+            public VisitorResult visitFile(IndexNode file) throws IOException {
+                if (calculateFilter.test(file) && !file.hasExtensionType(FILE_HASH.value)) {
+                    Path path = base.resolve(file.getRelativePath());
+                    file.addExtension(FileContentHashIndexExtension.create(path));
+                    resetUniversalHashToRoot(file.getParent());
+                }
+                return super.visitFile(file);
+            }
+
+            private void resetUniversalHashToRoot(IndexNode dir) {
+                if (dir == null) {
+                    return;
+                }
+                if (dir.hasExtensionType(UNIVERSAL_HASH.value)) {
+                    dir.removeExtensionType(UNIVERSAL_HASH.value);
+                    resetUniversalHashToRoot(dir.getParent());
+                }
+            }
+        });
         LOG.debug("Initialized file content hashes");
     }
 
-    private FileIndex readIndex(Path base, Path indexFile, Predicate<Path> pathIndexFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
+    private FileIndex readIndex(Path base, Path indexFile, IndexNodeFactory nodeFactory) throws IOException {
         LOG.debug("Reading existing file index from {}", indexFile);
-        IndexNode root = new IndexNodeReader().read(base, indexFile);
-        FileIndex index = new FileIndex(base, root, pathIndexFilter, hashNodeFilter);
+        FileIndex index = FileIndex.readFromPath(base, indexFile, nodeFactory);
         LOG.debug("Read index with {} files with {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
         return index;
     }
@@ -103,34 +155,11 @@ public class FileIndexCli {
         });
     }
 
-    private FileIndex initializeIndex(Path base, Predicate<Path> pathIndexFilter, Predicate<IndexNode> hashNodeFilter) throws IOException {
+    private FileIndex initializeIndex(Path base, ImportPathFilter pathFilter, IndexNodePathFactory nodeFactory) throws IOException {
         LOG.debug("Initializing file index from {}", base.toAbsolutePath());
-        FileIndex index = new FileIndex(base, pathIndexFilter, hashNodeFilter);
-        LOG.info("Initialed index with {} files with {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+        FileIndex index = FileIndex.create(base, pathFilter, nodeFactory);
+        LOG.info("Initialed index with {} files", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
         return index;
-    }
-
-    private Predicate<IndexNode> getHashNodeFilter() throws java.text.ParseException {
-        if (!cmd.hasOption('M')) {
-            return node -> true;
-        }
-
-        long maxSize = ByteUtil.toByte(cmd.getOptionValue('M'));
-        if (maxSize == 0) {
-            LOG.info("Disable content integrity verification", ByteUtil.toHumanSize(maxSize), maxSize);
-            return node -> false;
-        }
-
-        LOG.info("Limit content integrity verification to {} ({} bytes)", ByteUtil.toHumanSize(maxSize), maxSize);
-        return node -> {
-            if (node.getSize() > maxSize) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("File exceeds verification size of {}: {} with {}", ByteUtil.toHumanSize(maxSize), node.getRelativePath(), ByteUtil.toHumanSize(node.getSize()));
-                }
-                return false;
-            }
-            return true;
-        };
     }
 
     private void writeIndex(FileIndex index, Path indexFile) throws IOException {
@@ -140,55 +169,21 @@ public class FileIndexCli {
         try {
             tmp = indexFile.getParent().resolve(indexFile.getFileName() + ".tmp");
             new IndexNodeWriter().write(index.getRoot(), tmp);
-            Files.move(tmp, indexFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            Files.move(tmp, indexFile, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             if (tmp != null) {
                 Files.delete(tmp);
             }
         }
-        LOG.info("Written file index data to {}. The index root hash is {}", indexFile, index.getRoot().getHash());
+        LOG.info("Written file index data to {}", indexFile);
     }
 
-    private IndexChange getIndexChanges(FileIndex index) throws IOException {
-        LOG.debug("Updating index from {}", index.getBase());
-        IndexChange changes = index.getChanges();
-        LOG.debug("Updated index");
-
-        // Add all empty hashes to the modified change to resume hash calculation
-        Set<IndexNode> emptyHashes = index.getRoot().stream()
-                .filter(n -> n.getMode() == FileMode.FILE)
-                .filter(n -> n.getHash().equals(FileHash.ZERO))
-                .collect(Collectors.toSet());
-        LOG.info("Add {} files to resume integrity check", emptyHashes.size());
-        emptyHashes.addAll(changes.getModified());
-
-        IndexChange resumeChange = new IndexChange(changes.getBase(), new HashSet<>(changes.getCreated()), emptyHashes, changes.getRemoved());
-
-        if (!cmd.hasOption("q")) {
-            printChange(resumeChange);
+    private void ensureUniveralHashOfRoot(FileIndex index) throws IOException {
+        IndexNode root = index.getRoot();
+        if (!root.hasExtensionType(UNIVERSAL_HASH.value)) {
+            root.addExtension(UniversalHashIndexExtension.create(root));
         }
-        return resumeChange;
     }
-
-    private void updateIndex(Path indexFile, FileIndex index, IndexChange changes) throws IOException {
-        if (!changes.hasChanges()) {
-            LOG.info("No changes detected");
-            return;
-        }
-        AtomicBoolean done = new AtomicBoolean();
-        addShutdownHook(done, () -> {
-            writeIndex(index, indexFile);
-            return null;
-        });
-        LOG.info("Updating file index of {} files with {} by: {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()), changes);
-        index.updateChanges(changes, false);
-        LOG.debug("Updated file index");
-
-        writeIndex(index, indexFile);
-        done.set(true);
-        System.exit(1);
-    }
-
     private Path getIndexFile(Path base) throws IOException {
         Path indexFile;
         if (cmd.hasOption("d")) {
@@ -216,21 +211,26 @@ public class FileIndexCli {
             System.out.println("-  No changes");
             return;
         }
-        long totalChange = changes.getCreated().size() + changes.getModified().size() + changes.getRemoved().size();
 
-        if (totalChange > getChangeOutputLimit()) {
-            System.out.println("Too many changes: " + totalChange + " modifications. Skip printing. Change it by --output-limit option");
+        if (changes.getChanges().size() > getChangeOutputLimit()) {
+            System.out.println("Too many changes: " + changes.getChanges().size() + " modifications. Skip printing. Change it by --output-limit option");
             return;
         }
-        List<String> lines = new LinkedList<>();
 
-        lines.addAll(createLines("C  ", changes.getCreated()));
-        lines.addAll(createLines("M  ", changes.getModified()));
-        lines.addAll(createLines("D  ", changes.getRemoved()));
-
-        lines.stream()
-                .sorted((a, b) -> a.substring(3).compareTo(b.substring(3)))
+        changes.getChanges()
+                .stream()
+                .map(c -> {
+                    if (c.getChange() == IndexNodeChange.Change.CREATED) {
+                        return "C  " + c.getOther().getRelativePath();
+                    } else if (c.getChange() == IndexNodeChange.Change.MODIFIED) {
+                        return "M  " + c.getPrimary().getRelativePath();
+                    } else {
+                        return "R  " + c.getPrimary().getRelativePath();
+                    }
+                })
+                .sorted((a, b) -> a.charAt(0) - b.charAt(0))
                 .forEach(System.out::println);
+
     }
 
     private long getChangeOutputLimit() {

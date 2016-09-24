@@ -1,5 +1,6 @@
-package de.silef.service.file.tree;
+package de.silef.service.file.path;
 
+import de.silef.service.file.tree.Visitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

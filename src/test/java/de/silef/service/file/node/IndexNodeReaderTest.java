@@ -1,7 +1,6 @@
 package de.silef.service.file.node;
 
-import de.silef.service.file.node.IndexNode;
-import de.silef.service.file.node.IndexNodeReader;
+import de.silef.service.file.test.BasePathTest;
 import de.silef.service.file.test.PathUtils;
 import org.junit.Test;
 
@@ -18,7 +17,7 @@ import static org.junit.Assert.assertThat;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class IndexNodeReaderTest {
+public class IndexNodeReaderTest extends BasePathTest {
 
     @Test
     public void read() throws IOException {
@@ -26,7 +25,7 @@ public class IndexNodeReaderTest {
         Path file = PathUtils.getResourcePath("index/fileindex");
 
 
-        IndexNode root = new IndexNodeReader().read(base, file);
+        IndexNode root = new IndexNodeReader(standardFileIndexStrategy).read(base, file);
 
 
         List<String> paths = root.stream().map(n -> n.getRelativePath().toString()).collect(Collectors.toList());

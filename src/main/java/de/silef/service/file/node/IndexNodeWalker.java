@@ -29,7 +29,7 @@ public class IndexNodeWalker {
     }
 
     private static Visitor.VisitorResult walkSuppressWarning(IndexNode node, Visitor<? super IndexNode> visitor) throws IOException {
-        if (!node.getMode().isDirectory()) {
+        if (!node.isDirectory()) {
             return SKIP;
         }
         Visitor.VisitorResult result = visitor.preVisitDirectory(node);
@@ -38,9 +38,9 @@ public class IndexNodeWalker {
         }
 
         List<IndexNode> sortedChildren = new ArrayList<>(node.getChildren());
-        sortedChildren.sort(sortByModeAndName());
+        sortedChildren.sort(sortByTypeAndName());
         for (IndexNode child : sortedChildren) {
-            if (child.getMode().isDirectory()) {
+            if (child.isDirectory()) {
                 result = walk(child, visitor);
             } else {
                 result = visitor.visitFile(child);
@@ -55,11 +55,11 @@ public class IndexNodeWalker {
         return visitor.postVisitDirectory(node);
     }
 
-    private static Comparator<IndexNode> sortByModeAndName() {
+    private static Comparator<IndexNode> sortByTypeAndName() {
         return (a, b) -> {
-            if (a.getMode().isDirectory() && !b.getMode().isDirectory()) {
+            if (a.isDirectory() && !b.isDirectory()) {
                 return -1;
-            } else if (!a.getMode().isDirectory() && b.getMode().isDirectory()) {
+            } else if (!a.isDirectory() && b.isDirectory()) {
                 return 1;
             } else {
                 return a.getName().compareTo(b.getName());

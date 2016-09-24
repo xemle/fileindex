@@ -1,19 +1,26 @@
 package de.silef.service.file.node;
 
-import java.io.*;
-import java.nio.file.Path;
-import java.util.Collection;
-import java.util.zip.DeflaterOutputStream;
+import de.silef.service.file.extension.IndexExtension;
 
-import static de.silef.service.file.node.IndexNode.MAGIC_HEADER;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.zip.DeflaterOutputStream;
 
 /**
  * Created by sebastian on 17.09.16.
  */
 public class IndexNodeWriter {
 
+    static int MAGIC_HEADER = 0x23100702;
+
     public void write(IndexNode root, Path path) throws IOException {
-        try (FileOutputStream output = new FileOutputStream(path.toFile())) {
+        try (OutputStream output = Files.newOutputStream(path, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE_NEW)) {
             write(root, output);
         }
     }
@@ -28,17 +35,33 @@ public class IndexNodeWriter {
         }
     }
 
-    private void writeNode(IndexNode node, DataOutputStream output)
-            throws IOException {
-        output.writeInt(node.getMode().getValue());
-        output.writeLong(node.getSize());
-        output.writeLong(node.getCreationTime());
-        output.writeLong(node.getModifiedTime());
-        output.writeLong(node.getInode());
-        output.write(node.getHash().getBytes());
+    private void writeNode(IndexNode node, DataOutputStream dataOutput) throws IOException {
+        dataOutput.writeByte(node.getNodeType().getByte());
+        dataOutput.writeUTF(node.getName());
 
-        output.writeUTF(node.getName());
+        writeExtensions(node, dataOutput);
+        writeChildren(node, dataOutput);
+    }
 
+    private void writeExtensions(IndexNode node, DataOutputStream dataOutput) throws IOException {
+        List<IndexExtension> extensions = node.getExtensions()
+                .stream()
+                .sorted(byExtensionType())
+                .collect(Collectors.toList());
+        dataOutput.writeByte(extensions.size() & 0xff);
+        for (IndexExtension extension : extensions) {
+            byte[] data = extension.getData();
+            dataOutput.writeByte(extension.getType());
+            dataOutput.writeShort(data.length);
+            dataOutput.write(data);
+        }
+    }
+
+    private Comparator<IndexExtension> byExtensionType() {
+        return (a, b) -> a.getType() - b.getType();
+    }
+
+    private void writeChildren(IndexNode node, DataOutputStream output) throws IOException {
         Collection<IndexNode> children = node.getChildren();
         output.writeInt(children.size());
         for (IndexNode child : children) {

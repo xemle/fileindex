@@ -10,11 +10,12 @@ import java.nio.file.Path;
 /**
  * Created by sebastian on 17.09.16.
  */
-public abstract class BasePathTest {
+public abstract class BasePathTest extends BaseTest {
     protected Path tmp;
 
     @Before
     public void setUp() throws IOException {
+        super.setUp();
         tmp = Files.createTempDirectory("file-index-test-");
     }
 
