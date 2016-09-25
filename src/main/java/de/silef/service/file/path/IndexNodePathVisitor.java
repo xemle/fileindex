@@ -12,7 +12,7 @@ import java.util.*;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class IndexNodePathVisitor extends Visitor<Path> {
+public class IndexNodePathVisitor extends Visitor<PathAttribute> {
 
     private Stack<IndexNode> parentStack;
 
@@ -32,43 +32,43 @@ public class IndexNodePathVisitor extends Visitor<Path> {
     }
 
     @Override
-    public VisitorResult preVisitDirectory(Path path) throws IOException {
-        if (!Files.isReadable(path)) {
+    public VisitorResult preVisitDirectory(PathAttribute path) throws IOException {
+        if (!Files.isReadable(path.getPath())) {
             return VisitorResult.SKIP;
         }
 
         IndexNode node;
         if (parentStack.isEmpty()) {
-            node = nodeFactory.createFromPath(null, path);
-            pathToChildren.put(path, new ArrayList<>());
+            node = nodeFactory.createFromPath(null, path.getPath(), path.getAttributes());
+            pathToChildren.put(path.getPath(), new ArrayList<>());
         } else {
             IndexNode parent = parentStack.peek();
-            node = nodeFactory.createFromPath(parent, path);
-            pathToChildren.get(path.getParent()).add(node);
+            node = nodeFactory.createFromPath(parent, path.getPath(), path.getAttributes());
+            pathToChildren.get(path.getPath().getParent()).add(node);
         }
-        if (Files.isSymbolicLink(path)) {
+        if (path.isSymbolicLink()) {
             return VisitorResult.SKIP;
         }
 
         parentStack.push(node);
-        pathToChildren.put(path, new ArrayList<>());
+        pathToChildren.put(path.getPath(), new ArrayList<>());
         return super.preVisitDirectory(path);
     }
 
     @Override
-    public VisitorResult visitFile(Path file) throws IOException {
-        if (Files.isReadable(file) || Files.isSymbolicLink(file)) {
+    public VisitorResult visitFile(PathAttribute file) throws IOException {
+        if (file.isFile() || file.isSymbolicLink()) {
             IndexNode parent = parentStack.peek();
-            IndexNode child = nodeFactory.createFromPath(parent, file);
-            pathToChildren.get(file.getParent()).add(child);
+            IndexNode child = nodeFactory.createFromPath(parent, file.getPath(), file.getAttributes());
+            pathToChildren.get(file.getPath().getParent()).add(child);
         }
         return super.visitFile(file);
     }
 
     @Override
-    public VisitorResult postVisitDirectory(Path dir) throws IOException {
+    public VisitorResult postVisitDirectory(PathAttribute dir) throws IOException {
         lastDirNode = parentStack.pop();
-        List<IndexNode> children = pathToChildren.remove(dir);
+        List<IndexNode> children = pathToChildren.remove(dir.getPath());
         lastDirNode.setChildren(children);
         return super.postVisitDirectory(dir);
     }

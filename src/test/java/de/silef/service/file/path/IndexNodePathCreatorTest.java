@@ -33,7 +33,7 @@ public class IndexNodePathCreatorTest extends BasePathTest {
         Path base = PathUtils.getResourcePath("index/foo");
 
 
-        IndexNode root = pathCreator.create(base, p -> true);
+        IndexNode root = pathCreator.create(base);
 
 
         verifyNodeCount(root, 4);
@@ -46,7 +46,7 @@ public class IndexNodePathCreatorTest extends BasePathTest {
         Files.createSymbolicLink(tmp.resolve("bar/link"), tmp);
 
 
-        IndexNode root = pathCreator.create(tmp, p -> true);
+        IndexNode root = pathCreator.create(tmp);
 
 
         verifyNodeCount(root, 5);
@@ -59,7 +59,7 @@ public class IndexNodePathCreatorTest extends BasePathTest {
         Files.createSymbolicLink(tmp.resolve("bar/link"), Paths.get(".."));
 
 
-        IndexNode root = pathCreator.create(tmp, p -> true);
+        IndexNode root = pathCreator.create(tmp);
 
 
         verifyNodeCount(root, 5);
@@ -72,7 +72,7 @@ public class IndexNodePathCreatorTest extends BasePathTest {
         Files.createSymbolicLink(tmp.resolve("bar/link.txt"), tmp.resolve("doe.txt"));
 
 
-        IndexNode root = pathCreator.create(tmp, p -> true);
+        IndexNode root = pathCreator.create(tmp);
 
 
         verifyNodeCount(root, 5);
@@ -85,7 +85,7 @@ public class IndexNodePathCreatorTest extends BasePathTest {
         Files.createSymbolicLink(tmp.resolve("bar/link.txt"), Paths.get("zoo.txt"));
 
 
-        IndexNode root = pathCreator.create(tmp, p -> true);
+        IndexNode root = pathCreator.create(tmp);
 
 
         verifyNodeCount(root, 5);
@@ -98,7 +98,7 @@ public class IndexNodePathCreatorTest extends BasePathTest {
         Files.createSymbolicLink(tmp.resolve("bar/link.txt"), Paths.get("ghost.txt"));
 
 
-        IndexNode root = pathCreator.create(tmp, p -> true);
+        IndexNode root = pathCreator.create(tmp);
 
 
         verifyNodeCount(root, 5);

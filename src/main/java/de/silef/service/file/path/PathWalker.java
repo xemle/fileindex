@@ -20,21 +20,23 @@ import static de.silef.service.file.tree.Visitor.VisitorResult.*;
  */
 public class PathWalker {
 
-    public static Visitor.VisitorResult walk(Path base, Visitor<? super Path> visitor) throws IOException {
-        if (!Files.isDirectory(base)) {
+    public static Visitor.VisitorResult walk(PathAttribute base, Visitor<? super PathAttribute> visitor) throws IOException {
+        if (!base.isDirectory()) {
             return SKIP;
         }
+
         Visitor.VisitorResult result = visitor.preVisitDirectory(base);
         if (result != CONTINUE) {
             return result;
         }
-        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(base)) {
-            List<Path> paths = StreamSupport.stream(directoryStream.spliterator(), false)
+        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(base.getPath())) {
+            List<PathAttribute> paths = StreamSupport.stream(directoryStream.spliterator(), false)
+                    .map(PathAttribute::create)
                     .sorted(sortByModeAndName())
                     .collect(Collectors.toList());
 
-            for (Path path : paths) {
-                if (Files.isDirectory(path)) {
+            for (PathAttribute path : paths) {
+                if (path.isDirectory()) {
                     result = walk(path, visitor);
                 } else {
                     result = visitor.visitFile(path);
@@ -50,23 +52,14 @@ public class PathWalker {
         return visitor.postVisitDirectory(base);
     }
 
-    private static Comparator<Path> sortByModeAndName() {
-        Map<Path, Boolean> isDirCache = new HashMap<>();
+    private static Comparator<PathAttribute> sortByModeAndName() {
         return (a, b) -> {
-            if (!isDirCache.containsKey(a)) {
-                isDirCache.put(a, Files.isDirectory(a));
-            }
-            if (!isDirCache.containsKey(b)) {
-                isDirCache.put(b, Files.isDirectory(b));
-            }
-            boolean isADir = isDirCache.get(a);
-            boolean isBDir = isDirCache.get(b);
-            if (isADir && !isBDir) {
+            if (a.isDirectory() && !b.isDirectory()) {
                 return -1;
-            } else if (!isADir && isBDir) {
+            } else if (!a.isDirectory() && b.isDirectory()) {
                 return 1;
             } else {
-                return a.compareTo(b);
+                return a.getFileName().compareTo(b.getFileName());
             }
         };
     }

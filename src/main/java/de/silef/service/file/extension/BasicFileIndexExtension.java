@@ -30,7 +30,10 @@ public class BasicFileIndexExtension extends StandardIndexExtension {
 
     public static BasicFileIndexExtension createFromPath(Path file) throws IOException {
         BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
+        return createFromAttributes(attributes);
+    }
 
+    public static BasicFileIndexExtension createFromAttributes(BasicFileAttributes attributes) {
         long size = attributes.isDirectory() ? 0 : attributes.size();
         long createdTime = attributes.creationTime().toMillis();
         long modifiedTime = attributes.creationTime().toMillis();
@@ -137,5 +140,4 @@ public class BasicFileIndexExtension extends StandardIndexExtension {
             throw new IndexExtensionInvalidDataException("Could not read data of Unix File Extension");
         }
     }
-
 }

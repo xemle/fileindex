@@ -12,6 +12,7 @@ import de.silef.service.file.node.*;
 import de.silef.service.file.path.IndexNodePathFactory;
 import de.silef.service.file.tree.Visitor;
 import de.silef.service.file.util.ByteUtil;
+import de.silef.service.file.util.HashUtil;
 import org.apache.commons.cli.*;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
@@ -198,7 +199,9 @@ public class FileIndexCli {
     private void ensureUniveralHashOfRoot(FileIndex index) throws IOException {
         IndexNode root = index.getRoot();
         if (!root.hasExtensionType(UNIVERSAL_HASH.value)) {
-            root.addExtension(UniversalHashIndexExtension.create(root));
+            UniversalHashIndexExtension extension = UniversalHashIndexExtension.create(root);
+            LOG.debug("Root hash is {}", HashUtil.toHex(extension.getData()));
+            root.addExtension(extension);
         }
     }
 

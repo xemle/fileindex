@@ -35,6 +35,10 @@ public class IndexNodeType {
         boolean isFile = Files.isRegularFile(file);
         boolean isLink = Files.isSymbolicLink(file);
 
+        return create(isDirectory, isFile, isLink);
+    }
+
+    public static IndexNodeType create(boolean isDirectory, boolean isFile, boolean isLink) {
         int value = 0;
         if (isDirectory) {
             value |= DIRECTORY.value;

@@ -5,13 +5,13 @@ import de.silef.service.file.change.IndexNodeChangeAnalyser;
 import de.silef.service.file.extension.*;
 import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.node.IndexNodeFactory;
+import de.silef.service.file.node.IndexNodeType;
 import de.silef.service.file.path.CreatePathFilter;
 import de.silef.service.file.path.IndexNodePathFactory;
-import de.silef.service.file.node.IndexNodeType;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -43,15 +43,16 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
     }
 
     @Override
-    public boolean isValidPath(Path path) {
+    public boolean isValidPath(Path path, BasicFileAttributes attributes) {
         return true;
     }
 
     @Override
-    public IndexNode createFromPath(IndexNode parent, Path path) throws IOException {
-        IndexNode node = IndexNode.createFromPath(parent, path);
-        if (Files.isReadable(path)) {
-            node.addExtension(BasicFileIndexExtension.createFromPath(path));
+    public IndexNode createFromPath(IndexNode parent, Path path, BasicFileAttributes attributes) throws IOException {
+        IndexNodeType type = IndexNodeType.create(attributes.isDirectory(), attributes.isRegularFile(), attributes.isSymbolicLink());
+        IndexNode node = new IndexNode(parent, type, path.getFileName().toString());
+        if (!attributes.isOther()) {
+            node.addExtension(BasicFileIndexExtension.createFromAttributes(attributes));
             // Do not use UnixFile extension in favour of speed. You can save about 60%
             //node.addExtension(UnixFileIndexExtension.createFromPath(path));
         }

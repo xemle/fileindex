@@ -21,19 +21,24 @@ public class IndexNodePathCreator {
         this.pathFactory = pathFactory;
     }
 
+    public IndexNode create(Path base) throws IOException {
+        return create(base, (p, a) -> true);
+    }
+
     public IndexNode create(Path base, CreatePathFilter pathFilter) throws IOException {
         if (!Files.isDirectory(base)) {
             throw new IOException("Base path must be a directory");
         } else if (Files.isSymbolicLink(base)) {
             throw new IOException("Base path must not a symbolic link");
         }
-        Visitor<Path> resolveLinkVisitor = new ResolveLinkVisitorFilter(base);
-        Visitor<Path> filterVisitor = new VisitorFilter<>(pathFilter::isValidPath);
+        Visitor<PathAttribute> resolveLinkVisitor = new ResolveLinkVisitorFilter(base);
+        Visitor<PathAttribute> filterVisitor = new VisitorFilter<>(p -> pathFilter.isValidPath(p.getPath(), p.getAttributes()));
         IndexNodePathVisitor nodeVisitor = new IndexNodePathVisitor(pathFactory);
-        VisitorChain<Path> visitorChain = new VisitorChain<>(resolveLinkVisitor, filterVisitor, nodeVisitor);
+        VisitorChain<PathAttribute> visitorChain = new VisitorChain<>(resolveLinkVisitor, filterVisitor, nodeVisitor);
 
-        Visitor<Path> suppressErrorVisitor = new SuppressErrorPathVisitor<>(visitorChain);
-        PathWalker.walk(base, suppressErrorVisitor);
+        Visitor<PathAttribute> suppressErrorVisitor = new SuppressErrorPathVisitor<>(visitorChain);
+        PathAttribute path = PathAttribute.create(base);
+        PathWalker.walk(path, suppressErrorVisitor);
 
         IndexNode root = nodeVisitor.getRoot();
         if (root == null) {

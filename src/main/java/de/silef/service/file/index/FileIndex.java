@@ -36,7 +36,7 @@ public class FileIndex {
     }
 
     public static FileIndex create(Path base, IndexNodePathFactory nodePathFactory) throws IOException {
-        return create(base, p -> true, nodePathFactory);
+        return create(base, (p, a) -> true, nodePathFactory);
     }
 
     public static FileIndex create(Path base, CreatePathFilter pathFilter, IndexNodePathFactory nodePathFactory) throws IOException {
