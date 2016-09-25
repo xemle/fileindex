@@ -55,10 +55,10 @@ public class IndexNode implements Serializable {
         return typeToExtension;
     }
 
-    public static IndexNode createFromPath(IndexNode parent, Path file) throws IOException {
-        IndexNodeType nodeType = IndexNodeType.create(file);
-        String name = parent != null ? file.getFileName().toString() : "";
-
+    public static IndexNode createFromPath(IndexNode parent, Path path) throws IOException {
+        IndexNodeType nodeType = IndexNodeType.create(path);
+        boolean isRootNode = parent == null;
+        String name = isRootNode ? "" : path.getFileName().toString();
         return new IndexNode(parent, nodeType, name);
     }
 

@@ -6,7 +6,7 @@ import de.silef.service.file.extension.BasicFileIndexExtension;
 import de.silef.service.file.extension.FileContentHashIndexExtension;
 import de.silef.service.file.extension.UniversalHashIndexExtension;
 import de.silef.service.file.index.FileIndex;
-import de.silef.service.file.index.ImportPathFilter;
+import de.silef.service.file.path.CreatePathFilter;
 import de.silef.service.file.index.StandardFileIndexStrategy;
 import de.silef.service.file.node.*;
 import de.silef.service.file.path.IndexNodePathFactory;
@@ -155,7 +155,7 @@ public class FileIndexCli {
         });
     }
 
-    private FileIndex initializeIndex(Path base, ImportPathFilter pathFilter, IndexNodePathFactory nodeFactory) throws IOException {
+    private FileIndex initializeIndex(Path base, CreatePathFilter pathFilter, IndexNodePathFactory nodeFactory) throws IOException {
         LOG.debug("Initializing file index from {}", base.toAbsolutePath());
         FileIndex index = FileIndex.create(base, pathFilter, nodeFactory);
         LOG.info("Initialed index with {} files", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
@@ -189,7 +189,7 @@ public class FileIndexCli {
         if (cmd.hasOption("d")) {
             indexFile = Paths.get(cmd.getOptionValue("i"));
         } else {
-            String indexName = base.toRealPath().getFileName() + ".index";
+            String indexName = base.toRealPath().getFileName() + ".index2";
             indexFile = Paths.get(System.getProperty("user.home")).resolve(DEFAULT_INDEX_DIR).resolve(indexName);
             LOG.debug("Use default index file: {}", indexFile);
         }
@@ -219,18 +219,20 @@ public class FileIndexCli {
 
         changes.getChanges()
                 .stream()
-                .map(c -> {
-                    if (c.getChange() == IndexNodeChange.Change.CREATED) {
-                        return "C  " + c.getOther().getRelativePath();
-                    } else if (c.getChange() == IndexNodeChange.Change.MODIFIED) {
-                        return "M  " + c.getPrimary().getRelativePath();
-                    } else {
-                        return "R  " + c.getPrimary().getRelativePath();
-                    }
-                })
-                .sorted((a, b) -> a.charAt(0) - b.charAt(0))
+                .sorted((a, b) -> a.getRelativePath().compareTo(b.getRelativePath()))
+                .map(c -> getChangeChar(c.getChange()) + "  " + c.getRelativePath())
                 .forEach(System.out::println);
 
+    }
+
+    private String getChangeChar(IndexNodeChange.Change change) {
+        if (change == IndexNodeChange.Change.CREATED) {
+            return "C";
+        } else if (change == IndexNodeChange.Change.MODIFIED) {
+            return "M";
+        } else {
+            return "R";
+        }
     }
 
     private long getChangeOutputLimit() {

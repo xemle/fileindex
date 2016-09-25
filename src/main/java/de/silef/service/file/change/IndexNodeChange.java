@@ -2,6 +2,8 @@ package de.silef.service.file.change;
 
 import de.silef.service.file.node.IndexNode;
 
+import java.nio.file.Path;
+
 /**
  * Created by sebastian on 24.09.16.
  */
@@ -23,6 +25,14 @@ public class IndexNodeChange {
 
     public Change getChange() {
         return change;
+    }
+
+    public Path getRelativePath() {
+        if (change == Change.CREATED) {
+            return other.getRelativePath();
+        } else {
+            return primary.getRelativePath();
+        }
     }
 
     public IndexNode getPrimary() {

@@ -1,4 +1,6 @@
-package de.silef.service.file.tree;
+package de.silef.service.file.path;
+
+import de.silef.service.file.tree.Visitor;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -32,10 +34,6 @@ public class PathWalker {
                     .collect(Collectors.toList());
 
             for (Path path : paths) {
-                if (!Files.isReadable(path)) {
-                    continue;
-                }
-
                 if (Files.isDirectory(path)) {
                     result = walk(path, visitor);
                 } else {

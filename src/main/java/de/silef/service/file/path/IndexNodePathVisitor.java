@@ -12,7 +12,7 @@ import java.util.*;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class IndexNodeVisitor extends Visitor<Path> {
+public class IndexNodePathVisitor extends Visitor<Path> {
 
     private Stack<IndexNode> parentStack;
 
@@ -22,7 +22,7 @@ public class IndexNodeVisitor extends Visitor<Path> {
 
     private IndexNodePathFactory nodeFactory;
 
-    public IndexNodeVisitor(IndexNodePathFactory nodeFactory) throws IOException {
+    public IndexNodePathVisitor(IndexNodePathFactory nodeFactory) throws IOException {
         this.nodeFactory = nodeFactory;
         parentStack = new Stack<>();
     }
@@ -46,6 +46,9 @@ public class IndexNodeVisitor extends Visitor<Path> {
             node = nodeFactory.createFromPath(parent, path);
             pathToChildren.get(path.getParent()).add(node);
         }
+        if (Files.isSymbolicLink(path)) {
+            return VisitorResult.SKIP;
+        }
 
         parentStack.push(node);
         pathToChildren.put(path, new ArrayList<>());
@@ -53,13 +56,13 @@ public class IndexNodeVisitor extends Visitor<Path> {
     }
 
     @Override
-    public VisitorResult visitFile(Path path) throws IOException {
-        if (Files.isReadable(path)) {
+    public VisitorResult visitFile(Path file) throws IOException {
+        if (Files.isReadable(file) || Files.isSymbolicLink(file)) {
             IndexNode parent = parentStack.peek();
-            IndexNode child = nodeFactory.createFromPath(parent, path);
-            pathToChildren.get(path.getParent()).add(child);
+            IndexNode child = nodeFactory.createFromPath(parent, file);
+            pathToChildren.get(file.getParent()).add(child);
         }
-        return super.visitFile(path);
+        return super.visitFile(file);
     }
 
     @Override

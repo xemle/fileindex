@@ -5,10 +5,12 @@ import de.silef.service.file.change.IndexNodeChangeAnalyser;
 import de.silef.service.file.extension.*;
 import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.node.IndexNodeFactory;
+import de.silef.service.file.path.CreatePathFilter;
 import de.silef.service.file.path.IndexNodePathFactory;
 import de.silef.service.file.node.IndexNodeType;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,7 +21,7 @@ import static de.silef.service.file.extension.ExtensionType.*;
 /**
  * Created by sebastian on 23.09.16.
  */
-public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePathFactory, IndexNodeChangeAnalyser, ImportPathFilter {
+public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePathFactory, IndexNodeChangeAnalyser, CreatePathFilter {
 
     @Override
     public IndexNode createFromIndex(IndexNode parent, IndexNodeType type, String name, List<IndexExtension> extensions) {
@@ -39,10 +41,17 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
     }
 
     @Override
+    public boolean isValidPath(Path path) {
+        return true;
+    }
+
+    @Override
     public IndexNode createFromPath(IndexNode parent, Path path) throws IOException {
         IndexNode node = IndexNode.createFromPath(parent, path);
-        node.addExtension(BasicFileIndexExtension.createFromPath(path));
-        node.addExtension(UnixFileIndexExtension.createFromPath(path));
+        if (Files.isReadable(path)) {
+            node.addExtension(BasicFileIndexExtension.createFromPath(path));
+            node.addExtension(UnixFileIndexExtension.createFromPath(path));
+        }
         return node;
     }
 
@@ -69,10 +78,5 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
             return IndexNodeChange.Change.MODIFIED;
         }
         return IndexNodeChange.Change.SAME;
-    }
-
-    @Override
-    public boolean importPath(Path path) {
-        return true;
     }
 }

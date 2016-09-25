@@ -41,8 +41,9 @@ public class ResolveLinkVisitorFilter extends Visitor<Path> {
     private boolean hasSameBasePath(Path path) throws IOException {
         if (Files.isSymbolicLink(path)) {
             try {
-                Path realPath = path.toRealPath();
-                return realPath.startsWith(base);
+                Path target = Files.readSymbolicLink(path);
+                Path resolved = path.getParent().resolve(target).toAbsolutePath();
+                return resolved.startsWith(base);
             } catch (NoSuchFileException e) {
                 LOG.warn("Failed to resolve link: {}", path);
                 return false;

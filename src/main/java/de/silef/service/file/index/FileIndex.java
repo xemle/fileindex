@@ -7,9 +7,7 @@ import de.silef.service.file.change.IndexNodeChangeVisitor;
 import de.silef.service.file.extension.BasicFileIndexExtension;
 import de.silef.service.file.extension.ExtensionType;
 import de.silef.service.file.node.*;
-import de.silef.service.file.path.IndexNodePathFactory;
-import de.silef.service.file.path.IndexNodeVisitor;
-import de.silef.service.file.path.ResolveLinkVisitorFilter;
+import de.silef.service.file.path.*;
 import de.silef.service.file.tree.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,16 +37,11 @@ public class FileIndex {
         return create(base, p -> true, nodePathFactory);
     }
 
-    public static FileIndex create(Path base, ImportPathFilter pathFilter, IndexNodePathFactory nodePathFactory) throws IOException {
-        Visitor<Path> resolveLinkVisitor = new ResolveLinkVisitorFilter(base);
-        Visitor<Path> filterVisitor = new VisitorFilter<>(pathFilter::importPath);
-        IndexNodeVisitor nodeVisitor = new IndexNodeVisitor(nodePathFactory);
-        VisitorChain<Path> visitorChain = new VisitorChain<>(resolveLinkVisitor, filterVisitor, nodeVisitor);
+    public static FileIndex create(Path base, CreatePathFilter pathFilter, IndexNodePathFactory nodePathFactory) throws IOException {
+        IndexNodePathCreator pathCreator = new IndexNodePathCreator(nodePathFactory);
+        IndexNode root = pathCreator.create(base, pathFilter);
 
-        Visitor<Path> suppressErrorVisitor = new SuppressErrorPathVisitor<>(visitorChain);
-        PathWalker.walk(base, suppressErrorVisitor);
-
-        return new FileIndex(base, nodeVisitor.getRoot());
+        return new FileIndex(base, root);
     }
 
     public static FileIndex readFromPath(Path base, Path indexfile, IndexNodeFactory nodeFactory) throws IOException {
