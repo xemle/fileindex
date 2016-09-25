@@ -72,6 +72,6 @@ public class UniversalHashIndexExtension extends StandardIndexExtension {
 
     @Override
     public String toString() {
-        return HashUtil.toHex(getData());
+        return "UniversalHash{" + HashUtil.toHex(getData()) + "}";
     }
 }

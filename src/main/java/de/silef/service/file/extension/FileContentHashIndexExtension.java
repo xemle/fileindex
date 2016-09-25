@@ -52,6 +52,6 @@ public class FileContentHashIndexExtension extends StandardIndexExtension {
 
     @Override
     public String toString() {
-        return HashUtil.toHex(getData());
+        return "FileContentHash{" + HashUtil.toHex(getData()) + "}";
     }
 }

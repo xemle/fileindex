@@ -27,7 +27,9 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
     public IndexNode createFromIndex(IndexNode parent, IndexNodeType type, String name, List<IndexExtension> extensions) {
         List<IndexExtension> typedExtensions = new ArrayList<>(extensions.size());
         for (IndexExtension extension : extensions) {
-            if (extension.getType() == UNIVERSAL_HASH.value) {
+            if (extension.getType() == BASIC_FILE.value) {
+                typedExtensions.add(new BasicFileIndexExtension(extension.getData()));
+            } else if (extension.getType() == UNIVERSAL_HASH.value) {
                 typedExtensions.add(new UniversalHashIndexExtension(extension.getData()));
             } else if (extension.getType() == FILE_HASH.value) {
                 typedExtensions.add(new FileContentHashIndexExtension(extension.getData()));

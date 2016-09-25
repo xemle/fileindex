@@ -103,7 +103,7 @@ public class UnixFileIndexExtension extends StandardIndexExtension {
         if (!initialized) {
             extractData();
         }
-        return "UnixFileIndexExtension{" +
+        return "UnixFile{" +
                 "mode=" + mode +
                 ", userId=" + userId +
                 ", groupId=" + groupId +

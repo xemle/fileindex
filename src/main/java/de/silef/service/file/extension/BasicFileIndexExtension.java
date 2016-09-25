@@ -72,7 +72,7 @@ public class BasicFileIndexExtension extends StandardIndexExtension {
         if (!initialized) {
             extractData();
         }
-        return "BasicFileIndexExtension{" +
+        return "BasicFile{" +
                 "size=" + size +
                 ", creationTime=" + creationTime +
                 ", modifiedTime=" + modifiedTime +
