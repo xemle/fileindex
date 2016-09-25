@@ -13,14 +13,19 @@ public class IndexNodeChange {
 
     private Change change;
 
-    private IndexNode primary;
+    private IndexNode origin;
 
-    private IndexNode other;
+    private IndexNode update;
 
-    public IndexNodeChange(Change change, IndexNode primary, IndexNode other) {
+    /**
+     * @param change Type of change
+     * @param origin If change is CREATED, origin is the parent node for the update node
+     * @param update If change is REMOVED, update is null
+     */
+    public IndexNodeChange(Change change, IndexNode origin, IndexNode update) {
         this.change = change;
-        this.primary = primary;
-        this.other = other;
+        this.origin = origin;
+        this.update = update;
     }
 
     public Change getChange() {
@@ -29,30 +34,30 @@ public class IndexNodeChange {
 
     public Path getRelativePath() {
         if (change == Change.CREATED) {
-            return other.getRelativePath();
+            return update.getRelativePath();
         } else {
-            return primary.getRelativePath();
+            return origin.getRelativePath();
         }
     }
 
-    public IndexNode getPrimary() {
-        return primary;
+    public IndexNode getOrigin() {
+        return origin;
     }
 
-    public IndexNode getOther() {
-        return other;
+    public IndexNode getUpdate() {
+        return update;
     }
 
     @Override
     public String toString() {
         if (change.equals(Change.SAME)) {
-            return "= " + primary.getRelativePath();
+            return "= " + origin.getRelativePath();
         } else if (change.equals(Change.CREATED)) {
-            return "+ " + other.getRelativePath();
+            return "+ " + update.getRelativePath();
         } else if (change.equals(Change.MODIFIED)) {
-            return "! " + primary.getRelativePath();
+            return "! " + origin.getRelativePath();
         } else {
-            return "- " + primary.getRelativePath();
+            return "- " + origin.getRelativePath();
         }
     }
 }

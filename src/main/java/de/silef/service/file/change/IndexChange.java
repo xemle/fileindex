@@ -1,6 +1,9 @@
 package de.silef.service.file.change;
 
+import de.silef.service.file.node.IndexNode;
+
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,6 +31,35 @@ public class IndexChange {
 
     public List<IndexNodeChange> getChanges() {
         return changes;
+    }
+
+    public void apply() {
+        if (!hasChanges()) {
+            return;
+        }
+
+        List<IndexNodeChange> sortedChanges = changes.stream()
+                .sorted(orderToRemovedModifiedCreated())
+                .collect(Collectors.toList());
+        for (IndexNodeChange nodeChange : sortedChanges) {
+            IndexNode origin = nodeChange.getOrigin();
+            IndexNode update = nodeChange.getUpdate();
+
+            if (nodeChange.getChange() == IndexNodeChange.Change.CREATED ) {
+                if (!origin.isDirectory()) {
+                    throw new IllegalArgumentException("Origin node for created must be a directory");
+                }
+                origin.addChild(update);
+            } else if (nodeChange.getChange() == IndexNodeChange.Change.MODIFIED) {
+                origin.addAllExtensions(update.getExtensions());
+            } else if (nodeChange.getChange() == IndexNodeChange.Change.REMOVED) {
+                origin.getParent().removeChildByName(origin.getName());
+            }
+        }
+    }
+
+    private Comparator<IndexNodeChange> orderToRemovedModifiedCreated() {
+        return (a, b) -> b.getChange().compareTo(a.getChange());
     }
 
     public List<IndexNodeChange> getCreated() {
