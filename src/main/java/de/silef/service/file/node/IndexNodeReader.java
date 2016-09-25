@@ -2,9 +2,11 @@ package de.silef.service.file.node;
 
 import de.silef.service.file.extension.IndexExtension;
 import de.silef.service.file.extension.StandardIndexExtension;
-import de.silef.service.file.hash.FileHash;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
