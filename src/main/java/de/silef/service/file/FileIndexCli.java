@@ -13,6 +13,7 @@ import de.silef.service.file.path.IndexNodePathFactory;
 import de.silef.service.file.tree.Visitor;
 import de.silef.service.file.util.ByteUtil;
 import org.apache.commons.cli.*;
+import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,27 +56,35 @@ public class FileIndexCli {
         StandardFileIndexStrategy strategy = new StandardFileIndexStrategy();
 
         if (!Files.exists(indexFile)) {
-            FileIndex index = initializeIndex(base, strategy, strategy);
-            updateContentHash(index, indexFile);
-            ensureUniveralHashOfRoot(index);
+            FileIndex index = buildIndexFromPath(base, strategy, strategy);
+            calculateHashes(indexFile, index);
             writeIndex(index, indexFile);
             return;
         }
 
         FileIndex index = readIndex(base, indexFile, strategy);
-        FileIndex currentIndex = initializeIndex(base, strategy, strategy);
+        FileIndex currentIndex = buildIndexFromPath(base, strategy, strategy);
 
-        IndexChange changes = index.getChanges(currentIndex, strategy);
-        printChange(changes);
+        IndexChange changes = getIndexChanges(strategy, index, currentIndex);
 
         if (cmd.hasOption('n')) {
             System.exit(0);
         }
 
         index.applyChanges(changes);
+        calculateHashes(indexFile, index);
+        writeIndex(index, indexFile);
+    }
+
+    private IndexChange getIndexChanges(StandardFileIndexStrategy strategy, FileIndex index, FileIndex currentIndex) {
+        IndexChange changes = index.getChanges(currentIndex, strategy);
+        printChange(changes);
+        return changes;
+    }
+
+    private void calculateHashes(Path indexFile, FileIndex index) throws IOException, java.text.ParseException {
         updateContentHash(index, indexFile);
         ensureUniveralHashOfRoot(index);
-        writeIndex(index, indexFile);
     }
 
     private void updateContentHash(FileIndex index, Path indexFile) throws IOException, java.text.ParseException {
@@ -92,26 +101,14 @@ public class FileIndexCli {
     private void calculateFileContentHashes(FileIndex index) throws IOException, java.text.ParseException {
         LOG.info("Initializing file content hashes. This might take some time!");
 
-        long maxFileSize = cmd.hasOption('M') ? ByteUtil.toByte(cmd.getOptionValue('M')) : 0;
-        Predicate<IndexNode> calculateFilter = n -> {
-            BasicFileIndexExtension extension = (BasicFileIndexExtension) n.getExtensionByType(BASIC_FILE.value);
-            if (extension == null) {
-                return false;
-            }
-            long size = extension.getSize();
-            if (maxFileSize > 0 && size > maxFileSize) {
-                LOG.info("File size exceeds hash calculation limit of {}: {} has file {}", ByteUtil.toHumanSize(maxFileSize), ByteUtil.toHumanSize(size), n.getRelativePath());
-                return false;
-            }
-            return true;
-        };
+        Predicate<IndexNode> hashFileFilter = createHashFileFilter();
 
         Path base = index.getBase();
         IndexNodeWalker.walk(index.getRoot(), new Visitor<IndexNode>() {
 
             @Override
             public VisitorResult visitFile(IndexNode file) throws IOException {
-                if (needFileHash(file) && calculateFilter.test(file)) {
+                if (requiresFileHash(file) && hashFileFilter.test(file)) {
                     Path path = base.resolve(file.getRelativePath());
                     file.addExtension(FileContentHashIndexExtension.create(path));
                     resetUniversalHashToRoot(file.getParent());
@@ -119,7 +116,7 @@ public class FileIndexCli {
                 return super.visitFile(file);
             }
 
-            private boolean needFileHash(IndexNode file) {
+            private boolean requiresFileHash(IndexNode file) {
                 return (file.isFile() || file.isLink()) && !file.hasExtensionType(FILE_HASH.value);
             }
 
@@ -134,6 +131,22 @@ public class FileIndexCli {
             }
         });
         LOG.debug("Initialized file content hashes");
+    }
+
+    private Predicate<IndexNode> createHashFileFilter() throws java.text.ParseException {
+        long maxFileSize = cmd.hasOption('M') ? ByteUtil.toByte(cmd.getOptionValue('M')) : 0;
+        return n -> {
+            BasicFileIndexExtension extension = (BasicFileIndexExtension) n.getExtensionByType(BASIC_FILE.value);
+            if (extension == null) {
+                return false;
+            }
+            long size = extension.getSize();
+            if (maxFileSize > 0 && size > maxFileSize) {
+                LOG.info("File size exceeds hash calculation limit of {}: {} has file {}", ByteUtil.toHumanSize(maxFileSize), ByteUtil.toHumanSize(size), n.getRelativePath());
+                return false;
+            }
+            return true;
+        };
     }
 
     private FileIndex readIndex(Path base, Path indexFile, IndexNodeFactory nodeFactory) throws IOException {
@@ -159,10 +172,10 @@ public class FileIndexCli {
         });
     }
 
-    private FileIndex initializeIndex(Path base, CreatePathFilter pathFilter, IndexNodePathFactory nodeFactory) throws IOException {
-        LOG.debug("Initializing file index from {}", base.toAbsolutePath());
+    private FileIndex buildIndexFromPath(Path base, CreatePathFilter pathFilter, IndexNodePathFactory nodeFactory) throws IOException {
+        LOG.debug("Building file index from path {}", base.toAbsolutePath());
         FileIndex index = FileIndex.create(base, pathFilter, nodeFactory);
-        LOG.info("Initialed index with {} files", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
+        LOG.info("Built index with {} files of {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
         return index;
     }
 
@@ -172,7 +185,7 @@ public class FileIndexCli {
         Path tmp = null;
         try {
             tmp = indexFile.getParent().resolve(indexFile.getFileName() + ".tmp");
-            new IndexNodeWriter().write(index.getRoot(), tmp);
+            index.writeToPath(tmp);
             Files.move(tmp, indexFile, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             if (tmp != null) {
@@ -188,6 +201,7 @@ public class FileIndexCli {
             root.addExtension(UniversalHashIndexExtension.create(root));
         }
     }
+
     private Path getIndexFile(Path base) throws IOException {
         Path indexFile;
         if (cmd.hasOption("d")) {
@@ -201,9 +215,14 @@ public class FileIndexCli {
         return indexFile;
     }
 
-    private Path getBase() {
+    private Path getBase() throws IOException {
         if (cmd.getArgs().length > 0) {
-            return Paths.get(cmd.getArgs()[0]);
+            Path base = Paths.get(cmd.getArgs()[0]);
+            if (Files.isSymbolicLink(base)) {
+                LOG.info("Resolve absolute path {} from link {}", base.toRealPath(), base);
+                base = base.toRealPath();
+            }
+            return base;
         } else {
             LOG.debug("Use current working directory to index");
             return Paths.get(".");
@@ -252,12 +271,6 @@ public class FileIndexCli {
         }
     }
 
-    private List<String> createLines(String prefix, Collection<IndexNode> nodes) {
-        return nodes.stream()
-                .map(n -> prefix + n.getRelativePath().toString())
-                .collect(Collectors.toList());
-    }
-
     private static void printHelp(Options options) {
         HelpFormatter formatter = new HelpFormatter();
         String header = "\nFollowing options are available:";
@@ -283,7 +296,23 @@ public class FileIndexCli {
                 .hasArg(true)
                 .desc("Limit content integrity verification by file size. Use 0 to disable")
                 .build());
+        options.addOption(Option.builder()
+                .longOpt("start-delay")
+                .hasArg(true)
+                .desc("Delays the execution by given seconds. Useful for profiling")
+                .build());
         return options;
+    }
+
+    private static void delayExecution(CommandLine cmd) throws InterruptedException {
+        if (cmd.hasOption("start-delay")) {
+            int countdown = Integer.parseInt(cmd.getOptionValue("start-delay"));
+            while (countdown > 0) {
+                System.out.println("Wait " + (countdown--) + " seconds");
+                Thread.sleep(1000);
+            }
+            System.out.println("Starting...");
+        }
     }
 
     public static void main(String[] args) {
@@ -296,8 +325,9 @@ public class FileIndexCli {
                 printHelp(options);
             }
 
+            delayExecution(cmd);
             new FileIndexCli(cmd).run();
-        } catch (IOException | ParseException | java.text.ParseException e) {
+        } catch (IOException | ParseException | java.text.ParseException | InterruptedException e) {
             LOG.error("Failed to run fileindex", e);
             System.err.println("Failed to run fileindex: " + e.getMessage());
         }
