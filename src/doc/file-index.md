@@ -79,7 +79,7 @@ The index node type is one byte and defined as followed:
     +----------------+
     |    1 byte      |  Extension type = 0x01
     +----------------+
-    |    2 bytes     |  Length of data = 24
+    |    2 bytes     |  Length of data = 32
     +----------------+
     |    8 bytes     |  File size
     |                |
@@ -90,6 +90,11 @@ The index node type is one byte and defined as followed:
     |    8 bytes     |  Modified timestamp
     |                |
     +----------------+
+    |    8 bytes     |  File key
+    |                |
+    +----------------+
+
+For Unix filesystems the file key is the inode
 
 ### Unix File Extension:
 

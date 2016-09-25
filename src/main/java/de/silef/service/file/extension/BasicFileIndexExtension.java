@@ -4,22 +4,20 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
-import java.util.Map;
 
 import static de.silef.service.file.extension.ExtensionType.BASIC_FILE;
-import static de.silef.service.file.extension.ExtensionType.UNIX_FILE;
 
 /**
  * Created by sebastian on 23.09.16.
  */
 public class BasicFileIndexExtension extends StandardIndexExtension {
 
-    private static final int DATA_SIZE = 12;
+    private static final int DATA_SIZE = 32;
 
     private long size;
     private long creationTime;
     private long modifiedTime;
+    private long fileKey;
 
     private boolean initialized = false;
 
@@ -36,8 +34,25 @@ public class BasicFileIndexExtension extends StandardIndexExtension {
         long size = attributes.isDirectory() ? 0 : attributes.size();
         long createdTime = attributes.creationTime().toMillis();
         long modifiedTime = attributes.creationTime().toMillis();
+        long fileKey = getInode(attributes);
 
-        return new BasicFileIndexExtension(createData(size, createdTime, modifiedTime));
+        return new BasicFileIndexExtension(createData(size, createdTime, modifiedTime, fileKey));
+    }
+
+    private static long getInode(BasicFileAttributes attributes) {
+        String key = String.valueOf(attributes.fileKey());
+        int pos = key.indexOf("ino=");
+        if (pos >= 0) {
+            pos += 4;
+            int end = pos;
+            while (key.charAt(end) >= '0' && key.charAt(end) <= '9') {
+                end++;
+            }
+            if (pos < end) {
+                return Long.parseLong(key.substring(pos, end));
+            }
+        }
+        return 0;
     }
 
     public long getSize() {
@@ -78,6 +93,7 @@ public class BasicFileIndexExtension extends StandardIndexExtension {
         int result = (int) (size ^ (size >>> 32));
         result = 31 * result + (int) (creationTime ^ (creationTime >>> 32));
         result = 31 * result + (int) (modifiedTime ^ (modifiedTime >>> 32));
+        result = 31 * result + (int) (fileKey ^ (fileKey >>> 32));
         return result;
     }
 
@@ -90,15 +106,17 @@ public class BasicFileIndexExtension extends StandardIndexExtension {
                 "size=" + size +
                 ", creationTime=" + creationTime +
                 ", modifiedTime=" + modifiedTime +
+                ", fileKey=" + fileKey +
                 '}';
     }
 
-    private static byte[] createData(long size, long creationTime, long modifiedTime) {
+    private static byte[] createData(long size, long creationTime, long modifiedTime, long fileKey) {
         try (ByteArrayOutputStream output = new ByteArrayOutputStream();
              DataOutputStream dataOutput = new DataOutputStream(output)) {
             dataOutput.writeLong(size);
             dataOutput.writeLong(creationTime);
             dataOutput.writeLong(modifiedTime);
+            dataOutput.writeLong(fileKey);
 
             return output.toByteArray();
         } catch (IOException e) {
@@ -112,6 +130,7 @@ public class BasicFileIndexExtension extends StandardIndexExtension {
             size = dataInput.readLong();
             creationTime = dataInput.readLong();
             modifiedTime = dataInput.readLong();
+            fileKey = dataInput.readLong();
 
             initialized = true;
         } catch (IOException e) {

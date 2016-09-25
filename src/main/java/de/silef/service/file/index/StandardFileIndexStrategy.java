@@ -52,7 +52,8 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
         IndexNode node = IndexNode.createFromPath(parent, path);
         if (Files.isReadable(path)) {
             node.addExtension(BasicFileIndexExtension.createFromPath(path));
-            node.addExtension(UnixFileIndexExtension.createFromPath(path));
+            // Do not use UnixFile extension in favour of speed. You can save about 60%
+            //node.addExtension(UnixFileIndexExtension.createFromPath(path));
         }
         return node;
     }
@@ -63,20 +64,14 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
             return IndexNodeChange.Change.SAME;
         }
 
-        IndexNodeChange.Change change = analyseExtension(ExtensionType.BASIC_FILE, primary, other);
-        if (change != IndexNodeChange.Change.SAME) {
-            return change;
-        }
-        return analyseExtension(ExtensionType.UNIX_FILE, primary, other);
+        return analyseExtension(ExtensionType.BASIC_FILE, primary, other);
     }
 
     private IndexNodeChange.Change analyseExtension(ExtensionType type, IndexNode primary, IndexNode other) {
         IndexExtension primaryExtension = primary.getExtensionByType(type.value);
         IndexExtension otherExtension = other.getExtensionByType(type.value);
 
-        if (primaryExtension == null || otherExtension == null) {
-            return IndexNodeChange.Change.MODIFIED;
-        } else if (!Arrays.equals(primaryExtension.getData(), otherExtension.getData())) {
+        if (primaryExtension != null && otherExtension != null && !Arrays.equals(primaryExtension.getData(), otherExtension.getData())) {
             return IndexNodeChange.Change.MODIFIED;
         }
         return IndexNodeChange.Change.SAME;
