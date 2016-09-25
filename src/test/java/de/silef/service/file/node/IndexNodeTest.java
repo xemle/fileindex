@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertThat;
@@ -85,7 +86,7 @@ public class IndexNodeTest extends BaseTest {
         IndexNode root = IndexNode.createFromPath(null, base);
         givenChildrenNames(root, "foo.txt", "buz.txt", "readme.md", "doe.file");
 
-        IndexNode childMock = createNodeMock("buz.txt");
+        IndexNode childMock = createNodeMock(null, "buz.txt");
         root.addChild(childMock);
 
         IndexNode result = root.getChildByName("buz.txt");
@@ -98,13 +99,82 @@ public class IndexNodeTest extends BaseTest {
     }
 
     @Test
+    public void addChildShouldSetNewParent() throws IOException {
+        Path base = PathUtils.getResourcePath("index/foo");
+        IndexNode rootA = IndexNode.createFromPath(null, base);
+        IndexNode rootB = IndexNode.createFromPath(null, base);
+        IndexNode nodeB = IndexNode.createFromPath(rootB, base.resolve("doe.txt"));
+        rootB.setChildren(Arrays.asList(nodeB));
+
+
+        rootA.addChild(nodeB);
+
+
+        assertThat(nodeB.getParent(), is(rootA));
+    }
+
+    @Test
+    public void addChildShouldRemoveExistingNode() throws IOException {
+        Path base = PathUtils.getResourcePath("index/foo");
+        IndexNode rootA = IndexNode.createFromPath(null, base);
+        IndexNode nodeA = IndexNode.createFromPath(rootA, base.resolve("doe.txt"));
+        rootA.setChildren(Arrays.asList(nodeA));
+        IndexNode rootB = IndexNode.createFromPath(null, base);
+        IndexNode nodeB = IndexNode.createFromPath(rootB, base.resolve("doe.txt"));
+        rootB.setChildren(Arrays.asList(nodeB));
+
+
+        rootA.addChild(nodeB);
+
+
+        assertThat(rootA.getChildren().size(), is(1));
+        assertThat(rootA.getChildByName("doe.txt"), is(nodeB));
+        assertThat(nodeA.getParent(), is(nullValue()));
+    }
+
+    @Test
+    public void addChildShouldRemoveNodeFromOldParent() throws IOException {
+        Path base = PathUtils.getResourcePath("index/foo");
+        IndexNode rootA = IndexNode.createFromPath(null, base);
+        IndexNode rootB = IndexNode.createFromPath(null, base);
+        IndexNode nodeB = IndexNode.createFromPath(rootB, base.resolve("doe.txt"));
+        rootB.setChildren(Arrays.asList(nodeB));
+
+
+        rootA.addChild(nodeB);
+
+
+        assertThat(rootB.getChildByName("doe.txt"), is(nullValue()));
+    }
+
+    @Test
+    public void addChildShouldResetRelativePath() throws IOException {
+        Path base = PathUtils.getResourcePath("index/foo");
+        IndexNode rootA = IndexNode.createFromPath(null, base);
+        IndexNode rootB = IndexNode.createFromPath(null, base);
+        IndexNode dirB = IndexNode.createFromPath(rootB, base.resolve("bar"));
+        IndexNode nodeB = IndexNode.createFromPath(dirB, base.resolve("zoo.txt"));
+        dirB.setChildren(Arrays.asList(nodeB));
+        rootB.setChildren(Arrays.asList(dirB));
+
+        Path oldRelativePath = nodeB.getRelativePath();
+
+
+        rootA.addChild(nodeB);
+
+
+        assertThat(oldRelativePath, is(Paths.get("bar/zoo.txt")));
+        assertThat(nodeB.getRelativePath(), is(Paths.get("zoo.txt")));
+    }
+
+    @Test
     public void findChildByName() throws IOException {
         Path base = PathUtils.getResourcePath("index");
 
         IndexNode root = standardFileIndexStrategy.createFromPath(null, base);
         givenChildrenNames(root, "foo.txt", "bar.txt", "readme.md");
 
-        IndexNode childMock = createNodeMock("buz.txt");
+        IndexNode childMock = createNodeMock(null, "buz.txt");
         root.addChild(childMock);
 
 
@@ -114,15 +184,16 @@ public class IndexNodeTest extends BaseTest {
         assertThat(result, is(childMock));
     }
 
-    private void givenChildrenNames(IndexNode root, String... names) {
+    private void givenChildrenNames(IndexNode parent, String... names) {
         for (String name : names) {
-            IndexNode nodeMock = createNodeMock(name);
-            root.addChild(nodeMock);
+            IndexNode nodeMock = createNodeMock(parent, name);
+            parent.addChild(nodeMock);
         }
     }
 
-    private IndexNode createNodeMock(String name) {
+    private IndexNode createNodeMock(IndexNode parent, String name) {
         IndexNode nodeMock = Mockito.mock(IndexNode.class);
+        doReturn(parent).when(nodeMock).getParent();
         doReturn(name).when(nodeMock).getName();
         return nodeMock;
     }

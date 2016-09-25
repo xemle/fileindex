@@ -70,6 +70,11 @@ public class IndexNode implements Serializable {
         return parent;
     }
 
+    void setParent(IndexNode parent) {
+        this.parent = parent;
+        this.relativePath = null;
+    }
+
     public IndexNodeType getNodeType() {
         return nodeType;
     }
@@ -106,6 +111,12 @@ public class IndexNode implements Serializable {
         typeToExtension.put(extension.getType(), extension);
     }
 
+    public void addAllExtensions(List<IndexExtension> extensions) {
+        for (IndexExtension extension : extensions) {
+            addExtension(extension);
+        }
+    }
+
     public IndexExtension removeExtensionType(byte type) {
         return typeToExtension.remove(type);
     }
@@ -115,22 +126,33 @@ public class IndexNode implements Serializable {
     }
 
     public void addChild(IndexNode node) {
-        IndexNode oldNode = nameToChild.put(node.getName(), node);
-        children.remove(oldNode);
+        IndexNode nodeParent = node.getParent();
+        if (nodeParent != null) {
+            node.getParent().removeChildByName(node.getName());
+        }
+        node.setParent(this);
+
+        IndexNode oldNode = removeChildByName(node.getName());
+        if (oldNode != null) {
+            oldNode.setParent(null);
+        }
+        nameToChild.put(node.getName(), node);
         children.add(node);
     }
 
     public void setChildren(List<IndexNode> children) {
         this.children = new ArrayList<>(children);
         nameToChild = new HashMap<>();
-        for (IndexNode node : children) {
-            nameToChild.put(node.getName(), node);
+        for (IndexNode child : children) {
+            child.setParent(this);
+            nameToChild.put(child.getName(), child);
         }
     }
 
     public IndexNode removeChildByName(String name) {
         IndexNode node = getChildByName(name);
         children.remove(node);
+        nameToChild.remove(name);
         return node;
     }
 
@@ -171,4 +193,5 @@ public class IndexNode implements Serializable {
     public String toString() {
         return nodeType + " " + getRelativePath();
     }
+
 }
