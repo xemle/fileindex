@@ -5,7 +5,6 @@ import de.silef.service.file.tree.Visitor;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -29,10 +28,6 @@ public class IndexNode implements Serializable {
 
     private Path relativePath = null;
 
-    private IndexNode() {
-        super();
-    }
-
     public IndexNode(IndexNode parent, IndexNodeType nodeType, String name) {
         this(parent, nodeType, name, null);
     }
@@ -53,13 +48,6 @@ public class IndexNode implements Serializable {
             typeToExtension.put(extension.getType(), extension);
         }
         return typeToExtension;
-    }
-
-    public static IndexNode createFromPath(IndexNode parent, Path path) throws IOException {
-        IndexNodeType nodeType = IndexNodeType.create(path);
-        boolean isRootNode = parent == null;
-        String name = isRootNode ? "" : path.getFileName().toString();
-        return new IndexNode(parent, nodeType, name);
     }
 
     public boolean isRoot() {

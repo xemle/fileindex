@@ -32,7 +32,7 @@ public class IndexNodeTest extends BaseTest {
         IndexNode rootMock = Mockito.mock(IndexNode.class);
 
 
-        IndexNode node = IndexNode.createFromPath(rootMock, file);
+        IndexNode node = createFromPath(rootMock, file);
 
 
         assertThat(node.getNodeType().equals(IndexNodeType.FILE), is(true));
@@ -46,7 +46,7 @@ public class IndexNodeTest extends BaseTest {
         Path file = PathUtils.getResourcePath("index/foo");
 
 
-        IndexNode node = IndexNode.createFromPath(null, file);
+        IndexNode node = createFromPath(null, file);
 
 
         assertThat(node.getNodeType().equals(IndexNodeType.DIRECTORY), is(true));
@@ -61,7 +61,7 @@ public class IndexNodeTest extends BaseTest {
         IndexNode parentMock = Mockito.mock(IndexNode.class);
 
 
-        IndexNode node = IndexNode.createFromPath(parentMock, file);
+        IndexNode node = createFromPath(parentMock, file);
 
 
         assertThat(node.getParent(), is(parentMock));
@@ -72,7 +72,7 @@ public class IndexNodeTest extends BaseTest {
         Path file = PathUtils.getResourcePath("index/foo/doe.txt");
         IndexNode parentMock = Mockito.mock(IndexNode.class);
         when(parentMock.getRelativePath()).thenReturn(Paths.get("index/bar"));
-        IndexNode node = IndexNode.createFromPath(parentMock, file);
+        IndexNode node = createFromPath(parentMock, file);
 
 
         Path path = node.getRelativePath();
@@ -85,7 +85,7 @@ public class IndexNodeTest extends BaseTest {
     public void addChildShouldRemoveChildWithSameName() throws IOException {
         Path base = PathUtils.getResourcePath("index");
 
-        IndexNode root = IndexNode.createFromPath(null, base);
+        IndexNode root = createFromPath(null, base);
         givenChildrenNames(root, "foo.txt", "buz.txt", "readme.md", "doe.file");
 
         IndexNode childMock = createNodeMock(null, "buz.txt");
@@ -103,9 +103,9 @@ public class IndexNodeTest extends BaseTest {
     @Test
     public void addChildShouldSetNewParent() throws IOException {
         Path base = PathUtils.getResourcePath("index/foo");
-        IndexNode rootA = IndexNode.createFromPath(null, base);
-        IndexNode rootB = IndexNode.createFromPath(null, base);
-        IndexNode nodeB = IndexNode.createFromPath(rootB, base.resolve("doe.txt"));
+        IndexNode rootA = createFromPath(null, base);
+        IndexNode rootB = createFromPath(null, base);
+        IndexNode nodeB = createFromPath(rootB, base.resolve("doe.txt"));
         rootB.setChildren(Arrays.asList(nodeB));
 
 
@@ -118,11 +118,11 @@ public class IndexNodeTest extends BaseTest {
     @Test
     public void addChildShouldRemoveExistingNode() throws IOException {
         Path base = PathUtils.getResourcePath("index/foo");
-        IndexNode rootA = IndexNode.createFromPath(null, base);
-        IndexNode nodeA = IndexNode.createFromPath(rootA, base.resolve("doe.txt"));
+        IndexNode rootA = createFromPath(null, base);
+        IndexNode nodeA = createFromPath(rootA, base.resolve("doe.txt"));
         rootA.setChildren(Arrays.asList(nodeA));
-        IndexNode rootB = IndexNode.createFromPath(null, base);
-        IndexNode nodeB = IndexNode.createFromPath(rootB, base.resolve("doe.txt"));
+        IndexNode rootB = createFromPath(null, base);
+        IndexNode nodeB = createFromPath(rootB, base.resolve("doe.txt"));
         rootB.setChildren(Arrays.asList(nodeB));
 
 
@@ -137,9 +137,9 @@ public class IndexNodeTest extends BaseTest {
     @Test
     public void addChildShouldRemoveNodeFromOldParent() throws IOException {
         Path base = PathUtils.getResourcePath("index/foo");
-        IndexNode rootA = IndexNode.createFromPath(null, base);
-        IndexNode rootB = IndexNode.createFromPath(null, base);
-        IndexNode nodeB = IndexNode.createFromPath(rootB, base.resolve("doe.txt"));
+        IndexNode rootA = createFromPath(null, base);
+        IndexNode rootB = createFromPath(null, base);
+        IndexNode nodeB = createFromPath(rootB, base.resolve("doe.txt"));
         rootB.setChildren(Arrays.asList(nodeB));
 
 
@@ -152,10 +152,10 @@ public class IndexNodeTest extends BaseTest {
     @Test
     public void addChildShouldResetRelativePath() throws IOException {
         Path base = PathUtils.getResourcePath("index/foo");
-        IndexNode rootA = IndexNode.createFromPath(null, base);
-        IndexNode rootB = IndexNode.createFromPath(null, base);
-        IndexNode dirB = IndexNode.createFromPath(rootB, base.resolve("bar"));
-        IndexNode nodeB = IndexNode.createFromPath(dirB, base.resolve("zoo.txt"));
+        IndexNode rootA = createFromPath(null, base);
+        IndexNode rootB = createFromPath(null, base);
+        IndexNode dirB = createFromPath(rootB, base.resolve("bar"));
+        IndexNode nodeB = createFromPath(dirB, base.resolve("zoo.txt"));
         dirB.setChildren(Arrays.asList(nodeB));
         rootB.setChildren(Arrays.asList(dirB));
 
@@ -173,7 +173,7 @@ public class IndexNodeTest extends BaseTest {
     public void findChildByName() throws IOException {
         Path base = PathUtils.getResourcePath("index");
 
-        IndexNode root = standardFileIndexStrategy.createFromPath(null, base);
+        IndexNode root = standardFileIndexStrategy.createFromPath(null, base, Files.readAttributes(base, BasicFileAttributes.class));
         givenChildrenNames(root, "foo.txt", "bar.txt", "readme.md");
 
         IndexNode childMock = createNodeMock(null, "buz.txt");
@@ -184,6 +184,13 @@ public class IndexNodeTest extends BaseTest {
 
 
         assertThat(result, is(childMock));
+    }
+
+    private IndexNode createFromPath(IndexNode parent, Path path) throws IOException {
+        IndexNodeType nodeType = IndexNodeType.create(path);
+        boolean isRootNode = parent == null;
+        String name = isRootNode ? "" : path.getFileName().toString();
+        return new IndexNode(parent, nodeType, name);
     }
 
     private void givenChildrenNames(IndexNode parent, String... names) {
