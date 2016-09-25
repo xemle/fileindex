@@ -99,7 +99,7 @@ public class FileIndexCli {
                 return false;
             }
             long size = extension.getSize();
-            if (size > maxFileSize) {
+            if (maxFileSize > 0 && size > maxFileSize) {
                 LOG.info("File size exceeds hash calculation limit of {}: {} has file {}", ByteUtil.toHumanSize(maxFileSize), ByteUtil.toHumanSize(size), n.getRelativePath());
                 return false;
             }
@@ -111,12 +111,16 @@ public class FileIndexCli {
 
             @Override
             public VisitorResult visitFile(IndexNode file) throws IOException {
-                if (calculateFilter.test(file) && !file.hasExtensionType(FILE_HASH.value)) {
+                if (needFileHash(file) && calculateFilter.test(file)) {
                     Path path = base.resolve(file.getRelativePath());
                     file.addExtension(FileContentHashIndexExtension.create(path));
                     resetUniversalHashToRoot(file.getParent());
                 }
                 return super.visitFile(file);
+            }
+
+            private boolean needFileHash(IndexNode file) {
+                return (file.isFile() || file.isLink()) && !file.hasExtensionType(FILE_HASH.value);
             }
 
             private void resetUniversalHashToRoot(IndexNode dir) {
