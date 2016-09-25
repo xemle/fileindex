@@ -47,6 +47,20 @@ public class BasicFileIndexExtension extends StandardIndexExtension {
         return size;
     }
 
+    public long getCreationTime() {
+        if (!initialized) {
+            extractData();
+        }
+        return creationTime;
+    }
+
+    public long getModifiedTime() {
+        if (!initialized) {
+            extractData();
+        }
+        return modifiedTime;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
