@@ -20,7 +20,7 @@ public class IndexNodeWriter {
     static int MAGIC_HEADER = 0x23100702;
 
     public void write(IndexNode root, Path path) throws IOException {
-        try (OutputStream output = Files.newOutputStream(path, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE_NEW)) {
+        try (OutputStream output = Files.newOutputStream(path, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)) {
             write(root, output);
         }
     }
