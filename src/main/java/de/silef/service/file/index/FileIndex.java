@@ -3,10 +3,12 @@ package de.silef.service.file.index;
 import de.silef.service.file.change.IndexChange;
 import de.silef.service.file.change.IndexChangeCreator;
 import de.silef.service.file.change.IndexNodeChangeAnalyser;
-import de.silef.service.file.change.IndexNodeChangeVisitor;
 import de.silef.service.file.extension.BasicFileIndexExtension;
 import de.silef.service.file.extension.ExtensionType;
-import de.silef.service.file.node.*;
+import de.silef.service.file.node.IndexNode;
+import de.silef.service.file.node.IndexNodeFactory;
+import de.silef.service.file.node.IndexNodeReader;
+import de.silef.service.file.node.IndexNodeWriter;
 import de.silef.service.file.path.CreatePathFilter;
 import de.silef.service.file.path.IndexNodePathCreator;
 import de.silef.service.file.path.IndexNodePathFactory;
@@ -14,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
@@ -58,6 +61,9 @@ public class FileIndex {
     }
 
     public void writeToPath(Path indexfile) throws IOException {
+        if (!Files.isDirectory(indexfile.getParent())) {
+            Files.createDirectories(indexfile.getParent());
+        }
         new IndexNodeWriter().write(getRoot(), indexfile);
     }
 
