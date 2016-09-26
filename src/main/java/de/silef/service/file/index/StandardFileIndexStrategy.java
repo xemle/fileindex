@@ -12,7 +12,6 @@ import de.silef.service.file.path.IndexNodePathFactory;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,21 +24,24 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
 
     @Override
     public IndexNode createFromIndex(IndexNode parent, IndexNodeType type, String name, List<IndexExtension> extensions) {
-        List<IndexExtension> typedExtensions = new ArrayList<>(extensions.size());
-        for (IndexExtension extension : extensions) {
-            if (extension.getType() == BASIC_FILE.value) {
-                typedExtensions.add(new BasicFileIndexExtension(extension.getData()));
-            } else if (extension.getType() == UNIVERSAL_HASH.value) {
-                typedExtensions.add(new UniversalHashIndexExtension(extension.getData()));
-            } else if (extension.getType() == FILE_HASH.value) {
-                typedExtensions.add(new FileContentHashIndexExtension(extension.getData()));
-            } else if (extension.getType() == UNIX_FILE.value) {
-                typedExtensions.add(new UnixFileIndexExtension(extension.getData()));
-            } else {
-                typedExtensions.add(extension);
-            }
+        return new IndexNode(parent, type, name, extensions);
+    }
+
+    @Override
+    public IndexExtension createExtensionFromIndex(byte type, byte[] data) {
+        ExtensionType extensionType = ExtensionType.fromByte(type);
+        switch (extensionType) {
+            case BASIC_FILE:
+                return new BasicFileIndexExtension(data);
+            case UNIX_FILE:
+                return new UnixFileIndexExtension(data);
+            case FILE_HASH:
+                return new FileContentHashIndexExtension(data);
+            case UNIVERSAL_HASH:
+                return new UniversalHashIndexExtension(data);
+            default:
+                return new StandardIndexExtension(type, data);
         }
-        return new IndexNode(parent, type, name, typedExtensions);
     }
 
     @Override
