@@ -240,7 +240,7 @@ public class FileIndexCli {
 
     private Path getIndexFile(Path base) throws IOException {
         Path indexFile;
-        if (cmd.hasOption("d")) {
+        if (cmd.hasOption("i")) {
             indexFile = Paths.get(cmd.getOptionValue("i"));
         } else {
             String indexName = base.toRealPath().getFileName() + ".index2";
