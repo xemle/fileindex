@@ -75,13 +75,13 @@ public class IndexNodeReader {
         int extensionCount = input.readByte() & 0xff;
         List<IndexExtension> extensions = new ArrayList<>(extensionCount);
         for (int i = 0; i < extensionCount; i++) {
-            byte extensionType = input.readByte();
+            byte type = input.readByte();
             int size = input.readShort();
             byte[] data = new byte[size];
             if (input.read(data) != size) {
                 throw new IOException("Could not read extension data");
             }
-            extensions.add(new StandardIndexExtension(extensionType, data));
+            extensions.add(nodeFactory.createExtensionFromIndex(type, data));
         }
         return extensions;
     }
