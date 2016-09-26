@@ -1,5 +1,7 @@
 package de.silef.service.file.util;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import org.junit.Test;
 
 import static org.hamcrest.core.Is.is;
@@ -13,9 +15,10 @@ public class ByteUtilTest {
     @Test
     public void toHumanSize() {
         assertThat(ByteUtil.toHumanSize(5L), is("5B"));
-        assertThat(ByteUtil.toHumanSize(1048576L), is("1024.0KB"));
-        assertThat(ByteUtil.toHumanSize(214748364L), is("204.8MB"));
-        assertThat(ByteUtil.toHumanSize(12433741824L), is("11.6GB"));
+        assertThat(ByteUtil.toHumanSize(1048576L), is(String.format("%.1fKB", 1024.0)));
+        assertThat(ByteUtil.toHumanSize(214748364L), is(String.format("%.1fMB", 204.8)));
+        assertThat(ByteUtil.toHumanSize(12433741824L), is(String.format("%.1fGB", 11.6)));
+        
     }
 
     @Test
