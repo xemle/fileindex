@@ -8,12 +8,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 
 /**
  * Created by sebastian on 17.09.16.
  */
-public class ResolveLinkVisitorFilter extends Visitor<PathAttribute> {
+public class ResolveLinkVisitorFilter extends Visitor<PathInfo> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ResolveLinkVisitorFilter.class);
 
@@ -24,29 +23,29 @@ public class ResolveLinkVisitorFilter extends Visitor<PathAttribute> {
     }
 
     @Override
-    public VisitorResult preVisitDirectory(PathAttribute dir) throws IOException {
-        if (hasSameBasePath(dir)) {
-            return super.preVisitDirectory(dir);
+    public VisitorResult preVisitDirectory(PathInfo dirInfo) throws IOException {
+        if (hasSameBasePath(dirInfo)) {
+            return super.preVisitDirectory(dirInfo);
         }
         return VisitorResult.SKIP;
     }
 
     @Override
-    public VisitorResult visitFile(PathAttribute file) throws IOException {
-        if (hasSameBasePath(file)) {
-            return super.visitFile(file);
+    public VisitorResult visitFile(PathInfo fileInfo) throws IOException {
+        if (hasSameBasePath(fileInfo)) {
+            return super.visitFile(fileInfo);
         }
         return VisitorResult.SKIP;
     }
 
-    private boolean hasSameBasePath(PathAttribute path) throws IOException {
-        if (path.isSymbolicLink()) {
+    private boolean hasSameBasePath(PathInfo pathInfo) throws IOException {
+        if (pathInfo.isSymbolicLink()) {
             try {
-                Path target = Files.readSymbolicLink(path.getPath());
-                Path resolved = path.getPath().getParent().resolve(target).toAbsolutePath();
+                Path target = Files.readSymbolicLink(pathInfo.getPath());
+                Path resolved = pathInfo.getPath().getParent().resolve(target).toAbsolutePath();
                 return resolved.startsWith(base);
             } catch (NoSuchFileException e) {
-                LOG.warn("Failed to resolve link: {}", path);
+                LOG.warn("Failed to resolve link: {}", pathInfo.getPath());
                 return false;
             }
         }

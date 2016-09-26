@@ -1,7 +1,6 @@
 package de.silef.service.file.path;
 
 import de.silef.service.file.node.IndexNode;
-import de.silef.service.file.path.IndexNodePathFactory;
 import de.silef.service.file.tree.Visitor;
 
 import java.io.IOException;
@@ -12,7 +11,7 @@ import java.util.*;
 /**
  * Created by sebastian on 17.09.16.
  */
-public class IndexNodePathVisitor extends Visitor<PathAttribute> {
+public class IndexNodePathVisitor extends Visitor<PathInfo> {
 
     private Stack<IndexNode> parentStack;
 
@@ -32,31 +31,31 @@ public class IndexNodePathVisitor extends Visitor<PathAttribute> {
     }
 
     @Override
-    public VisitorResult preVisitDirectory(PathAttribute path) throws IOException {
-        if (!Files.isReadable(path.getPath())) {
+    public VisitorResult preVisitDirectory(PathInfo pathInfo) throws IOException {
+        if (!Files.isReadable(pathInfo.getPath())) {
             return VisitorResult.SKIP;
         }
 
         IndexNode node;
         if (parentStack.isEmpty()) {
-            node = nodeFactory.createFromPath(null, path.getPath(), path.getAttributes());
-            pathToChildren.put(path.getPath(), new ArrayList<>());
+            node = nodeFactory.createFromPath(null, pathInfo.getPath(), pathInfo.getAttributes());
+            pathToChildren.put(pathInfo.getPath(), new ArrayList<>());
         } else {
             IndexNode parent = parentStack.peek();
-            node = nodeFactory.createFromPath(parent, path.getPath(), path.getAttributes());
-            pathToChildren.get(path.getPath().getParent()).add(node);
+            node = nodeFactory.createFromPath(parent, pathInfo.getPath(), pathInfo.getAttributes());
+            pathToChildren.get(pathInfo.getPath().getParent()).add(node);
         }
-        if (path.isSymbolicLink()) {
+        if (pathInfo.isSymbolicLink()) {
             return VisitorResult.SKIP;
         }
 
         parentStack.push(node);
-        pathToChildren.put(path.getPath(), new ArrayList<>());
-        return super.preVisitDirectory(path);
+        pathToChildren.put(pathInfo.getPath(), new ArrayList<>());
+        return super.preVisitDirectory(pathInfo);
     }
 
     @Override
-    public VisitorResult visitFile(PathAttribute file) throws IOException {
+    public VisitorResult visitFile(PathInfo file) throws IOException {
         if (file.isFile() || file.isSymbolicLink()) {
             IndexNode parent = parentStack.peek();
             IndexNode child = nodeFactory.createFromPath(parent, file.getPath(), file.getAttributes());
@@ -66,7 +65,7 @@ public class IndexNodePathVisitor extends Visitor<PathAttribute> {
     }
 
     @Override
-    public VisitorResult postVisitDirectory(PathAttribute dir) throws IOException {
+    public VisitorResult postVisitDirectory(PathInfo dir) throws IOException {
         lastDirNode = parentStack.pop();
         List<IndexNode> children = pathToChildren.remove(dir.getPath());
         lastDirNode.setChildren(children);

@@ -31,14 +31,14 @@ public class IndexNodePathCreator {
         } else if (Files.isSymbolicLink(base)) {
             throw new IOException("Base path must not a symbolic link");
         }
-        Visitor<PathAttribute> resolveLinkVisitor = new ResolveLinkVisitorFilter(base);
-        Visitor<PathAttribute> filterVisitor = new VisitorFilter<>(p -> pathFilter.isValidPath(p.getPath(), p.getAttributes()));
+        Visitor<PathInfo> resolveLinkVisitor = new ResolveLinkVisitorFilter(base);
+        Visitor<PathInfo> filterVisitor = new VisitorFilter<>(p -> pathFilter.isValidPath(p.getPath(), p.getAttributes()));
         IndexNodePathVisitor nodeVisitor = new IndexNodePathVisitor(pathFactory);
-        VisitorChain<PathAttribute> visitorChain = new VisitorChain<>(resolveLinkVisitor, filterVisitor, nodeVisitor);
+        VisitorChain<PathInfo> visitorChain = new VisitorChain<>(resolveLinkVisitor, filterVisitor, nodeVisitor);
 
-        Visitor<PathAttribute> suppressErrorVisitor = new SuppressErrorPathVisitor<>(visitorChain);
-        PathAttribute path = PathAttribute.create(base);
-        PathWalker.walk(path, suppressErrorVisitor);
+        Visitor<PathInfo> suppressErrorVisitor = new SuppressErrorPathVisitor<>(visitorChain);
+        PathInfo pathInfo = PathInfo.create(base);
+        PathWalker.walk(pathInfo, suppressErrorVisitor);
 
         IndexNode root = nodeVisitor.getRoot();
         if (root == null) {

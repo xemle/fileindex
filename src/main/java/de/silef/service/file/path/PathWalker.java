@@ -7,9 +7,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -20,7 +18,7 @@ import static de.silef.service.file.tree.Visitor.VisitorResult.*;
  */
 public class PathWalker {
 
-    public static Visitor.VisitorResult walk(PathAttribute base, Visitor<? super PathAttribute> visitor) throws IOException {
+    public static Visitor.VisitorResult walk(PathInfo base, Visitor<? super PathInfo> visitor) throws IOException {
         if (!base.isDirectory()) {
             return SKIP;
         }
@@ -30,16 +28,16 @@ public class PathWalker {
             return result;
         }
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(base.getPath())) {
-            List<PathAttribute> paths = StreamSupport.stream(directoryStream.spliterator(), false)
-                    .map(PathAttribute::create)
+            List<PathInfo> pathInfos = StreamSupport.stream(directoryStream.spliterator(), false)
+                    .map(PathInfo::create)
                     .sorted(sortByModeAndName())
                     .collect(Collectors.toList());
 
-            for (PathAttribute path : paths) {
-                if (path.isDirectory()) {
-                    result = walk(path, visitor);
+            for (PathInfo pathInfo : pathInfos) {
+                if (pathInfo.isDirectory()) {
+                    result = walk(pathInfo, visitor);
                 } else {
-                    result = visitor.visitFile(path);
+                    result = visitor.visitFile(pathInfo);
                 }
                 if (result == SKIP_SIBLINGS || result == TERMINATE) {
                     break;
@@ -52,7 +50,7 @@ public class PathWalker {
         return visitor.postVisitDirectory(base);
     }
 
-    private static Comparator<PathAttribute> sortByModeAndName() {
+    private static Comparator<PathInfo> sortByModeAndName() {
         return (a, b) -> {
             if (a.isDirectory() && !b.isDirectory()) {
                 return -1;
