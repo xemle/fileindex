@@ -2,9 +2,7 @@ package de.silef.service.file;
 
 import de.silef.service.file.change.IndexChange;
 import de.silef.service.file.change.IndexNodeChange;
-import de.silef.service.file.extension.BasicFileIndexExtension;
-import de.silef.service.file.extension.FileContentHashIndexExtension;
-import de.silef.service.file.extension.UniversalHashIndexExtension;
+import de.silef.service.file.extension.*;
 import de.silef.service.file.index.FileIndex;
 import de.silef.service.file.path.CreatePathFilter;
 import de.silef.service.file.index.StandardFileIndexStrategy;
@@ -23,12 +21,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static de.silef.service.file.extension.ExtensionType.BASIC_FILE;
 import static de.silef.service.file.extension.ExtensionType.FILE_HASH;
@@ -100,21 +95,49 @@ public class FileIndexCli {
     }
 
     private void calculateFileContentHashes(FileIndex index) throws IOException, java.text.ParseException {
-        LOG.info("Initializing file content hashes. This might take some time!");
+        long missingHashBytes = getMissingHashBytes(index);
+        LOG.info("Initializing file content hashes of {}. This might take some time!", ByteUtil.toHumanSize(missingHashBytes));
 
         Predicate<IndexNode> hashFileFilter = createHashFileFilter();
 
         Path base = index.getBase();
         IndexNodeWalker.walk(index.getRoot(), new Visitor<IndexNode>() {
 
+            long bytesHashed = 0;
+            long lastLogBytesHashed = 0;
+            long logInterval = (1 << 30); // 1GB
+
             @Override
             public VisitorResult visitFile(IndexNode file) throws IOException {
-                if (requiresFileHash(file) && hashFileFilter.test(file)) {
-                    Path path = base.resolve(file.getRelativePath());
-                    file.addExtension(FileContentHashIndexExtension.create(path));
+                if (!requiresFileHash(file) || !hashFileFilter.test(file)) {
+                    return VisitorResult.SKIP;
+                }
+                Path path = base.resolve(file.getRelativePath());
+                try {
+                    IndexExtension extension = FileContentHashIndexExtension.create(path);
+                    file.addExtension(extension);
                     resetUniversalHashToRoot(file.getParent());
+                    logProgress(file);
+                } catch (IOException | IllegalArgumentException e) {
+                    LOG.warn("Could not create content hash of " + path, e);
                 }
                 return super.visitFile(file);
+            }
+
+            private void logProgress(IndexNode file) {
+                bytesHashed += getFileSize(file);
+                if (lastLogBytesHashed + logInterval < bytesHashed) {
+                    LOG.info("Hashed {}", ByteUtil.toHumanSize(bytesHashed));
+                    lastLogBytesHashed += logInterval;
+                }
+            }
+
+            private long getFileSize(IndexNode file) {
+                IndexExtension extension = file.getExtensionByType(BASIC_FILE.value);
+                if (extension != null && extension instanceof BasicFileIndexExtension) {
+                    return ((BasicFileIndexExtension) extension).getSize();
+                }
+                return 0;
             }
 
             private boolean requiresFileHash(IndexNode file) {
@@ -132,6 +155,16 @@ public class FileIndexCli {
             }
         });
         LOG.debug("Initialized file content hashes");
+    }
+
+    private long getMissingHashBytes(FileIndex index) {
+        return index.getRoot()
+                    .stream()
+                    .filter(IndexNode::isFile)
+                    .filter(n -> !n.hasExtensionType(ExtensionType.FILE_HASH.value))
+                    .filter(n -> n.hasExtensionType(ExtensionType.BASIC_FILE.value))
+                    .map(n -> ((BasicFileIndexExtension) n.getExtensionByType(BASIC_FILE.value)).getSize())
+                    .reduce(0L, (a, b) -> a + b);
     }
 
     private Predicate<IndexNode> createHashFileFilter() throws java.text.ParseException {

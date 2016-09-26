@@ -25,7 +25,7 @@ public class FileContentHashIndexExtension extends StandardIndexExtension {
 
     public static FileContentHashIndexExtension create(Path file) throws IOException {
         if (!Files.isSymbolicLink(file) && !Files.isRegularFile(file)) {
-            throw new IllegalArgumentException("File content hash is only allowed on files and symbolic links");
+            throw new IllegalArgumentException("File content hash is only allowed on files and symbolic links: " + file);
         }
         long size = Files.size(file);
         byte[] sizeBytes = DataUtils.toBytes(size);
