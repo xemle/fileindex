@@ -239,12 +239,19 @@ public class FileIndexCli {
     }
 
     private Path getIndexFile(Path base) throws IOException {
+        Path indexDir;
+        if (cmd.hasOption("I")) {
+            indexDir = Paths.get(cmd.getOptionValue("I"));
+        } else {
+            indexDir = Paths.get(System.getProperty("user.home")).resolve(DEFAULT_INDEX_DIR);
+        }
+
         Path indexFile;
         if (cmd.hasOption("i")) {
             indexFile = Paths.get(cmd.getOptionValue("i"));
         } else {
             String indexName = base.toRealPath().getFileName() + ".index2";
-            indexFile = Paths.get(System.getProperty("user.home")).resolve(DEFAULT_INDEX_DIR).resolve(indexName);
+            indexFile = indexDir.resolve(indexName);
             LOG.debug("Use default index file: {}", indexFile);
         }
         Files.createDirectories(indexFile.getParent());
@@ -319,7 +326,8 @@ public class FileIndexCli {
         Options options = new Options();
 
         options.addOption("h", false, "Print this help");
-        options.addOption("i", true, "Index file to store. Default is ~/" + DEFAULT_INDEX_DIR + "/<dirname>.index");
+        options.addOption("i", true, "Index file path to store. Default is ~/" + DEFAULT_INDEX_DIR + "/<dirname>.index");
+        options.addOption("I", true, "Index directory to store file indices. Default is ~/" + DEFAULT_INDEX_DIR);
         options.addOption("q", false, "Quiet mode");
         options.addOption("n", false, "Print changes only. Requires an existing file index");
         options.addOption(Option.builder()
