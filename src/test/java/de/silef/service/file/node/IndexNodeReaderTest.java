@@ -25,7 +25,7 @@ public class IndexNodeReaderTest extends BasePathTest {
         Path file = PathUtils.getResourcePath("index/fileindex");
 
 
-        IndexNode root = new IndexNodeReader(standardFileIndexStrategy).read(base, file);
+        IndexNode root = new IndexNodeReader(indexStrategy).read(base, file);
 
 
         List<String> paths = root.stream().map(n -> n.getRelativePath().toString()).collect(Collectors.toList());

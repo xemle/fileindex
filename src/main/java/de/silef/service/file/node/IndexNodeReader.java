@@ -1,7 +1,6 @@
 package de.silef.service.file.node;
 
 import de.silef.service.file.extension.IndexExtension;
-import de.silef.service.file.extension.StandardIndexExtension;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -54,7 +53,7 @@ public class IndexNodeReader {
         String name = dataInput.readUTF();
         List<IndexExtension> extensions = readExtensions(dataInput);
 
-        IndexNode node = nodeFactory.createFromIndex(parent, type, name, extensions);
+        IndexNode node = nodeFactory.createIndexNode(parent, type, name, extensions);
 
         List<IndexNode> children = readChildren(dataInput, node);
         node.setChildren(children);
@@ -81,7 +80,7 @@ public class IndexNodeReader {
             if (input.read(data) != size) {
                 throw new IOException("Could not read extension data");
             }
-            extensions.add(nodeFactory.createExtensionFromIndex(type, data));
+            extensions.add(nodeFactory.createExtension(type, data));
         }
         return extensions;
     }

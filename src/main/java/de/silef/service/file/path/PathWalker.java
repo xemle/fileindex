@@ -18,7 +18,13 @@ import static de.silef.service.file.tree.Visitor.VisitorResult.*;
  */
 public class PathWalker {
 
-    public static Visitor.VisitorResult walk(PathInfo base, Visitor<? super PathInfo> visitor) throws IOException {
+    private IndexNodePathFactory pathFactory;
+
+    public PathWalker(IndexNodePathFactory pathFactory) {
+        this.pathFactory = pathFactory;
+    }
+
+    public Visitor.VisitorResult walk(PathInfo base, Visitor<? super PathInfo> visitor) throws IOException {
         if (!base.isDirectory()) {
             return SKIP;
         }
@@ -29,7 +35,7 @@ public class PathWalker {
         }
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(base.getPath())) {
             List<PathInfo> pathInfos = StreamSupport.stream(directoryStream.spliterator(), false)
-                    .map(PathInfo::create)
+                    .map(pathFactory::createPathInfo)
                     .sorted(sortByModeAndName())
                     .collect(Collectors.toList());
 

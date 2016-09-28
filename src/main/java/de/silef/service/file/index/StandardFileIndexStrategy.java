@@ -6,29 +6,30 @@ import de.silef.service.file.extension.*;
 import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.node.IndexNodeFactory;
 import de.silef.service.file.node.IndexNodeType;
-import de.silef.service.file.path.CreatePathFilter;
+import de.silef.service.file.path.PathInfoFilter;
 import de.silef.service.file.path.IndexNodePathFactory;
+import de.silef.service.file.path.PathInfo;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.List;
 
-import static de.silef.service.file.extension.ExtensionType.*;
-
 /**
  * Created by sebastian on 23.09.16.
  */
-public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePathFactory, IndexNodeChangeAnalyser, CreatePathFilter {
+public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePathFactory, IndexNodeChangeAnalyser, PathInfoFilter {
 
     @Override
-    public IndexNode createFromIndex(IndexNode parent, IndexNodeType type, String name, List<IndexExtension> extensions) {
+    public IndexNode createIndexNode(IndexNode parent, IndexNodeType type, String name, List<IndexExtension> extensions) {
         return new IndexNode(parent, type, name, extensions);
     }
 
     @Override
-    public IndexExtension createExtensionFromIndex(byte type, byte[] data) {
+    public IndexExtension createExtension(byte type, byte[] data) {
         ExtensionType extensionType = ExtensionType.fromByte(type);
         switch (extensionType) {
             case BASIC_FILE:
@@ -45,14 +46,25 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
     }
 
     @Override
-    public boolean isValidPath(Path path, BasicFileAttributes attributes) {
+    public boolean isValidPathInfo(PathInfo pathInfo) {
         return true;
     }
 
     @Override
-    public IndexNode createFromPath(IndexNode parent, Path path, BasicFileAttributes attributes) throws IOException {
+    public PathInfo createPathInfo(Path path)  {
+        try {
+            BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            return new PathInfo(path, attributes);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not read attributes from path " + path, e);
+        }
+    }
+
+    @Override
+    public IndexNode createIndexNode(IndexNode parent, PathInfo pathInfo) throws IOException {
+        BasicFileAttributes attributes = pathInfo.getAttributes();
         IndexNodeType type = IndexNodeType.create(attributes.isDirectory(), attributes.isRegularFile(), attributes.isSymbolicLink());
-        IndexNode node = new IndexNode(parent, type, path.getFileName().toString());
+        IndexNode node = new IndexNode(parent, type, pathInfo.getFileName());
         if (!attributes.isOther()) {
             node.addExtension(BasicFileIndexExtension.createFromAttributes(attributes));
             // Do not use UnixFile extension in favour of speed. You can save about 60%

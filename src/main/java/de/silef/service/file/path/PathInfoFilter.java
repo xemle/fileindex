@@ -6,7 +6,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 /**
  * Created by sebastian on 24.09.16.
  */
-public interface CreatePathFilter {
+public interface PathInfoFilter {
 
-    boolean isValidPath(Path path, BasicFileAttributes attributes);
+    boolean isValidPathInfo(PathInfo pathInfo);
 }

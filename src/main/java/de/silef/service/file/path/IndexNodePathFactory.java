@@ -10,6 +10,9 @@ import java.nio.file.attribute.BasicFileAttributes;
  * Created by sebastian on 24.09.16.
  */
 public interface IndexNodePathFactory {
-    IndexNode createFromPath(IndexNode parent, Path path, BasicFileAttributes attributes) throws IOException;
+
+    PathInfo createPathInfo(Path path);
+
+    IndexNode createIndexNode(IndexNode parent, PathInfo pathInfo) throws IOException;
 
 }

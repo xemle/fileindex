@@ -4,15 +4,16 @@ import de.silef.service.file.change.IndexChange;
 import de.silef.service.file.change.IndexNodeChange;
 import de.silef.service.file.extension.*;
 import de.silef.service.file.index.FileIndex;
-import de.silef.service.file.path.CreatePathFilter;
 import de.silef.service.file.index.StandardFileIndexStrategy;
-import de.silef.service.file.node.*;
+import de.silef.service.file.node.IndexNode;
+import de.silef.service.file.node.IndexNodeFactory;
+import de.silef.service.file.node.IndexNodeWalker;
 import de.silef.service.file.path.IndexNodePathFactory;
+import de.silef.service.file.path.PathInfoFilter;
 import de.silef.service.file.tree.Visitor;
 import de.silef.service.file.util.ByteUtil;
 import de.silef.service.file.util.HashUtil;
 import org.apache.commons.cli.*;
-import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,9 +26,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
-import static de.silef.service.file.extension.ExtensionType.BASIC_FILE;
-import static de.silef.service.file.extension.ExtensionType.FILE_HASH;
-import static de.silef.service.file.extension.ExtensionType.UNIVERSAL_HASH;
+import static de.silef.service.file.extension.ExtensionType.*;
 
 /**
  * Created by sebastian on 17.09.16.
@@ -49,19 +48,19 @@ public class FileIndexCli {
         Path base = getBase();
         Path indexFile = getIndexFile(base);
 
-        StandardFileIndexStrategy strategy = new StandardFileIndexStrategy();
+        StandardFileIndexStrategy indexStrategy = new StandardFileIndexStrategy();
 
         if (!Files.exists(indexFile)) {
-            FileIndex index = buildIndexFromPath(base, strategy, strategy);
+            FileIndex index = buildIndexFromPath(base, indexStrategy);
             calculateHashes(indexFile, index);
             writeIndex(index, indexFile);
             return;
         }
 
-        FileIndex index = readIndex(base, indexFile, strategy);
-        FileIndex currentIndex = buildIndexFromPath(base, strategy, strategy);
+        FileIndex index = readIndex(base, indexFile, indexStrategy);
+        FileIndex currentIndex = buildIndexFromPath(base, indexStrategy);
 
-        IndexChange changes = getIndexChanges(strategy, index, currentIndex);
+        IndexChange changes = getIndexChanges(indexStrategy, index, currentIndex);
 
         if (cmd.hasOption('n')) {
             System.exit(0);
@@ -80,13 +79,13 @@ public class FileIndexCli {
 
     private void calculateHashes(Path indexFile, FileIndex index) throws IOException, java.text.ParseException {
         updateContentHash(index, indexFile);
-        ensureUniveralHashOfRoot(index);
+        ensureUniversalHashOfRoot(index);
     }
 
     private void updateContentHash(FileIndex index, Path indexFile) throws IOException, java.text.ParseException {
         AtomicBoolean done = new AtomicBoolean();
         addShutdownHook(done, () -> {
-            ensureUniveralHashOfRoot(index);
+            ensureUniversalHashOfRoot(index);
             writeIndex(index, indexFile);
             return null;
         });
@@ -206,9 +205,13 @@ public class FileIndexCli {
         });
     }
 
-    private FileIndex buildIndexFromPath(Path base, CreatePathFilter pathFilter, IndexNodePathFactory nodeFactory) throws IOException {
+    private FileIndex buildIndexFromPath(Path base, StandardFileIndexStrategy indexStrategy) throws IOException {
+        return buildIndexFromPath(base, indexStrategy, indexStrategy);
+    }
+
+    private FileIndex buildIndexFromPath(Path base, PathInfoFilter pathInfoFilter, IndexNodePathFactory nodeFactory) throws IOException {
         LOG.debug("Building file index from path {}", base.toAbsolutePath());
-        FileIndex index = FileIndex.create(base, pathFilter, nodeFactory);
+        FileIndex index = FileIndex.create(base, pathInfoFilter, nodeFactory);
         LOG.info("Built index with {} files of {}", index.getTotalFileCount(), ByteUtil.toHumanSize(index.getTotalFileSize()));
         return index;
     }
@@ -229,7 +232,7 @@ public class FileIndexCli {
         LOG.info("Written file index data to {}", indexFile);
     }
 
-    private void ensureUniveralHashOfRoot(FileIndex index) throws IOException {
+    private void ensureUniversalHashOfRoot(FileIndex index) throws IOException {
         IndexNode root = index.getRoot();
         if (!root.hasExtensionType(UNIVERSAL_HASH.value)) {
             UniversalHashIndexExtension extension = UniversalHashIndexExtension.create(root);
@@ -288,7 +291,6 @@ public class FileIndexCli {
                 .sorted((a, b) -> a.getRelativePath().compareTo(b.getRelativePath()))
                 .map(c -> getChangeChar(c.getChange()) + "  " + c.getRelativePath())
                 .forEach(System.out::println);
-
     }
 
     private String getChangeChar(IndexNodeChange.Change change) {

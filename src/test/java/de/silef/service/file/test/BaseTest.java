@@ -10,10 +10,10 @@ import java.io.IOException;
  */
 public class BaseTest {
 
-    protected StandardFileIndexStrategy standardFileIndexStrategy;
+    protected StandardFileIndexStrategy indexStrategy;
 
     @Before
     public void setUp() throws IOException {
-        standardFileIndexStrategy = new StandardFileIndexStrategy();
+        indexStrategy = new StandardFileIndexStrategy();
     }
 }

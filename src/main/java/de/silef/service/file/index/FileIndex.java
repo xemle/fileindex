@@ -9,7 +9,7 @@ import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.node.IndexNodeFactory;
 import de.silef.service.file.node.IndexNodeReader;
 import de.silef.service.file.node.IndexNodeWriter;
-import de.silef.service.file.path.CreatePathFilter;
+import de.silef.service.file.path.PathInfoFilter;
 import de.silef.service.file.path.IndexNodePathCreator;
 import de.silef.service.file.path.IndexNodePathFactory;
 import org.slf4j.Logger;
@@ -36,12 +36,12 @@ public class FileIndex {
     }
 
     public static FileIndex create(Path base, IndexNodePathFactory nodePathFactory) throws IOException {
-        return create(base, (p, a) -> true, nodePathFactory);
+        return create(base, (p) -> true, nodePathFactory);
     }
 
-    public static FileIndex create(Path base, CreatePathFilter pathFilter, IndexNodePathFactory nodePathFactory) throws IOException {
+    public static FileIndex create(Path base, PathInfoFilter pathInfoFilter, IndexNodePathFactory nodePathFactory) throws IOException {
         IndexNodePathCreator pathCreator = new IndexNodePathCreator(nodePathFactory);
-        IndexNode root = pathCreator.create(base, pathFilter);
+        IndexNode root = pathCreator.create(base, pathInfoFilter);
 
         return new FileIndex(base, root);
     }

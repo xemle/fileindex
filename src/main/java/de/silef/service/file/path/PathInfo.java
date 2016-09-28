@@ -18,18 +18,9 @@ public class PathInfo {
 
     private String fileNameCache;
 
-    private PathInfo(Path path, BasicFileAttributes attributes) {
+    public PathInfo(Path path, BasicFileAttributes attributes) {
         this.path = path;
         this.attributes = attributes;
-    }
-
-    public static PathInfo create(Path path)  {
-        try {
-            BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-            return new PathInfo(path, attributes);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not read attributes from path " + path, e);
-        }
     }
 
     public Path getPath() {

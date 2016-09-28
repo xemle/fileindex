@@ -27,13 +27,13 @@ public class IndexChangeTest extends BasePathTest {
     @Test
     public void getChangeShouldHaveNewFile() throws IOException {
         PathUtils.copy(PathUtils.getResourcePath("index/foo"), tmp);
-        FileIndex old = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
         Files.write(tmp.resolve("new.txt"), "content".getBytes());
 
-        FileIndex update = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
 
 
-        IndexChange changes = old.getChanges(update, standardFileIndexStrategy);
+        IndexChange changes = old.getChanges(update, indexStrategy);
 
 
         assertThat(changes.hasChanges(), is(true));
@@ -46,13 +46,13 @@ public class IndexChangeTest extends BasePathTest {
     @Test
     public void getChangeShouldHaveModifiedFile() throws IOException {
         PathUtils.copy(PathUtils.getResourcePath("index/foo"), tmp);
-        FileIndex old = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
         Files.write(tmp.resolve("doe.txt"), "content".getBytes());
 
-        FileIndex update = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
 
 
-        IndexChange changes = update.getChanges(old, standardFileIndexStrategy);
+        IndexChange changes = update.getChanges(old, indexStrategy);
 
 
         List<String> pathNames = changes.getModified().stream().map(n -> n.getOrigin().getRelativePath().toString()).collect(Collectors.toList());
@@ -65,13 +65,13 @@ public class IndexChangeTest extends BasePathTest {
     @Test
     public void getChangeShouldHaveRemovedFile() throws IOException {
         PathUtils.copy(PathUtils.getResourcePath("index/foo"), tmp);
-        FileIndex old = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
         Files.delete(tmp.resolve("doe.txt"));
 
-        FileIndex update = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
 
 
-        IndexChange changes = old.getChanges(update, standardFileIndexStrategy);
+        IndexChange changes = old.getChanges(update, indexStrategy);
 
 
         List<String> pathNames = changes.getRemoved().stream().map(n -> n.getOrigin().getRelativePath().toString()).collect(Collectors.toList());
@@ -84,14 +84,14 @@ public class IndexChangeTest extends BasePathTest {
     @Test
     public void getChangeShouldWithFileTypeChangeFromFileToDir() throws IOException {
         PathUtils.copy(PathUtils.getResourcePath("index/foo"), tmp);
-        FileIndex old = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
         Files.delete(tmp.resolve("doe.txt"));
         Files.createDirectory(tmp.resolve("doe.txt"));
 
-        FileIndex update = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
 
 
-        IndexChange changes = update.getChanges(old, standardFileIndexStrategy);
+        IndexChange changes = update.getChanges(old, indexStrategy);
 
 
         List<String> createdPathNames = changes.getCreated().stream().map(n -> n.getUpdate().getRelativePath().toString()).collect(Collectors.toList());
@@ -105,14 +105,14 @@ public class IndexChangeTest extends BasePathTest {
     @Test
     public void getChangeShouldWithFileTypeChangeFromDirToFile() throws IOException {
         PathUtils.copy(PathUtils.getResourcePath("index/foo"), tmp);
-        FileIndex old = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
         PathUtils.delete(tmp.resolve("bar"));
         Files.write(tmp.resolve("bar"), "content".getBytes(), StandardOpenOption.CREATE_NEW);
 
-        FileIndex update = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
 
 
-        IndexChange changes = update.getChanges(old, standardFileIndexStrategy);
+        IndexChange changes = update.getChanges(old, indexStrategy);
 
 
         List<String> createdPathNames = changes.getCreated().stream().map(n -> n.getUpdate().getRelativePath().toString()).collect(Collectors.toList());
@@ -125,11 +125,11 @@ public class IndexChangeTest extends BasePathTest {
 
     @Test
     public void applyCreated() throws IOException {
-        FileIndex old = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
         Files.write(tmp.resolve("new.txt"), "content".getBytes());
 
-        FileIndex update = FileIndex.create(tmp, standardFileIndexStrategy);
-        IndexChange changes = old.getChanges(update, standardFileIndexStrategy);
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
+        IndexChange changes = old.getChanges(update, indexStrategy);
 
 
         changes.apply();
@@ -141,12 +141,12 @@ public class IndexChangeTest extends BasePathTest {
     @Test
     public void applyModified() throws IOException {
         Files.write(tmp.resolve("foo.txt"), "content".getBytes());
-        FileIndex old = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
 
         Files.write(tmp.resolve("foo.txt"), "update".getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
-        FileIndex update = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
 
-        IndexChange changes = old.getChanges(update, standardFileIndexStrategy);
+        IndexChange changes = old.getChanges(update, indexStrategy);
 
         IndexNode updateFooTxt = update.getRoot().getChildByName("foo.txt");
 
@@ -170,11 +170,11 @@ public class IndexChangeTest extends BasePathTest {
     @Test
     public void applyRemoved() throws IOException {
         Files.write(tmp.resolve("foo.txt"), "content".getBytes());
-        FileIndex old = FileIndex.create(tmp, standardFileIndexStrategy);
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
 
         Files.delete(tmp.resolve("foo.txt"));
-        FileIndex update = FileIndex.create(tmp, standardFileIndexStrategy);
-        IndexChange changes = old.getChanges(update, standardFileIndexStrategy);
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
+        IndexChange changes = old.getChanges(update, indexStrategy);
 
 
         changes.apply();

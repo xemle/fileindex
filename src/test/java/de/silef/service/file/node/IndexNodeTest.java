@@ -6,10 +6,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -173,7 +171,7 @@ public class IndexNodeTest extends BaseTest {
     public void findChildByName() throws IOException {
         Path base = PathUtils.getResourcePath("index");
 
-        IndexNode root = standardFileIndexStrategy.createFromPath(null, base, Files.readAttributes(base, BasicFileAttributes.class));
+        IndexNode root = indexStrategy.createIndexNode(null, indexStrategy.createPathInfo(base));
         givenChildrenNames(root, "foo.txt", "bar.txt", "readme.md");
 
         IndexNode childMock = createNodeMock(null, "buz.txt");

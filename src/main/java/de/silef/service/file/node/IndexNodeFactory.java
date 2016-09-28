@@ -9,8 +9,8 @@ import java.util.List;
  */
 public interface IndexNodeFactory {
 
-    IndexNode createFromIndex(IndexNode parent, IndexNodeType type, String name, List<IndexExtension> extensions);
+    IndexNode createIndexNode(IndexNode parent, IndexNodeType type, String name, List<IndexExtension> extensions);
     
-    IndexExtension createExtensionFromIndex(byte type, byte[] data);
+    IndexExtension createExtension(byte type, byte[] data);
 
 }

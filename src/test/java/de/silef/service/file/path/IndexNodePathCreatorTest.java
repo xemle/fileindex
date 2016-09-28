@@ -25,7 +25,7 @@ public class IndexNodePathCreatorTest extends BasePathTest {
     public void setUp() throws IOException {
         super.setUp();
 
-        pathCreator = new IndexNodePathCreator(standardFileIndexStrategy);
+        pathCreator = new IndexNodePathCreator(indexStrategy);
     }
 
     @Test

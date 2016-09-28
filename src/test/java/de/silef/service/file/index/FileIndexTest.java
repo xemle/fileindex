@@ -5,9 +5,7 @@ import de.silef.service.file.test.PathUtils;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -22,7 +20,7 @@ public class FileIndexTest extends BasePathTest {
         Path base = PathUtils.getResourcePath("index/foo");
 
 
-        FileIndex index = FileIndex.create(base, standardFileIndexStrategy);
+        FileIndex index = FileIndex.create(base, indexStrategy);
 
 
         assertThat(index.getTotalFileCount(), is(4L));
