@@ -127,7 +127,7 @@ public class FileIndexCli {
             private void logProgress(IndexNode file) {
                 bytesHashed += getFileSize(file);
                 if (lastLogBytesHashed + logInterval < bytesHashed) {
-                    LOG.info("Hashed {}", ByteUtil.toHumanSize(bytesHashed));
+                    LOG.info("Created content hashes of {}", ByteUtil.toHumanSize(bytesHashed));
                     lastLogBytesHashed += logInterval;
                 }
             }
