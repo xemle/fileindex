@@ -11,19 +11,20 @@ import java.util.*;
  * Created by sebastian on 24.09.16.
  */
 public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
-    private List<IndexNodeChange> changes = new LinkedList<>();
 
-    private IndexNode otherRoot;
+    private IndexNode currentRoot;
 
     private Stack<IndexNode> originStack = new Stack<>();
-    private Stack<IndexNode> updateStack = new Stack<>();
+    private Stack<IndexNode> currentStack = new Stack<>();
 
-    private Map<IndexNode, Set<String>> otherChildNamesVisited = new HashMap<>();
+    private Map<IndexNode, Set<String>> currentChildNamesVisited = new HashMap<>();
+
+    private List<IndexNodeChange> changes = new LinkedList<>();
 
     private IndexNodeChangeFactory changeFactory;
 
-    public IndexNodeChangeVisitor(IndexNode otherRoot, IndexNodeChangeFactory changeFactory) {
-        this.otherRoot = otherRoot;
+    public IndexNodeChangeVisitor(IndexNode currentRoot, IndexNodeChangeFactory changeFactory) {
+        this.currentRoot = currentRoot;
         this.changeFactory = changeFactory;
     }
 
@@ -38,48 +39,48 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
             return super.preVisitDirectory(dir);
         }
 
-        IndexNode otherParent = updateStack.peek();
-        IndexNode otherDir = otherParent.getChildByName(dir.getName());
-        otherChildNamesVisited.get(otherParent).remove(dir.getName());
+        IndexNode currentParent = currentStack.peek();
+        IndexNode currentDir = currentParent.getChildByName(dir.getName());
+        currentChildNamesVisited.get(currentParent).remove(dir.getName());
 
-        if (otherDir == null) {
+        if (currentDir == null) {
             removed(dir);
             return VisitorResult.SKIP;
-        } else if (!dir.getNodeType().equals(otherDir.getNodeType())) {
+        } else if (!dir.getNodeType().equals(currentDir.getNodeType())) {
             removed(dir);
-            created(dir.getParent(), otherDir);
+            created(dir.getParent(), currentDir);
             return VisitorResult.SKIP;
         }
 
-        IndexNodeChange nodeChange = changeFactory.createIndexNodeChange(dir, otherDir);
+        IndexNodeChange nodeChange = changeFactory.createIndexNodeChange(dir, currentDir);
         if (nodeChange.getChange() == IndexNodeChange.Change.MODIFIED) {
             modified(nodeChange);
         }
         originStack.push(dir);
-        updateStack.push(otherDir);
+        currentStack.push(currentDir);
 
-        Set<String> names = otherDir.getChildNames();
-        otherChildNamesVisited.put(otherDir, names);
+        Set<String> names = currentDir.getChildNames();
+        currentChildNamesVisited.put(currentDir, names);
         return super.preVisitDirectory(dir);
     }
 
     private void preVisitDirectoryRoot(IndexNode root) {
         originStack.push(root);
-        updateStack.push(otherRoot);
+        currentStack.push(currentRoot);
 
-        IndexNodeChange rootChange = changeFactory.createIndexNodeChange(root, otherRoot);
+        IndexNodeChange rootChange = changeFactory.createIndexNodeChange(root, currentRoot);
         if (rootChange.getChange() == IndexNodeChange.Change.MODIFIED) {
             modified(rootChange);
         }
 
-        Set<String> names = otherRoot.getChildNames();
-        otherChildNamesVisited.put(otherRoot, names);
+        Set<String> names = currentRoot.getChildNames();
+        currentChildNamesVisited.put(currentRoot, names);
     }
 
     @Override
     public VisitorResult visitFile(IndexNode file) throws IOException {
-        IndexNode otherParent = updateStack.peek();
-        otherChildNamesVisited.get(otherParent).remove(file.getName());
+        IndexNode otherParent = currentStack.peek();
+        currentChildNamesVisited.get(otherParent).remove(file.getName());
 
         IndexNode otherFile = otherParent.getChildByName(file.getName());
         if (otherFile == null) {
@@ -100,12 +101,12 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
     @Override
     public VisitorResult postVisitDirectory(IndexNode dir) throws IOException {
         IndexNode lastOriginDir = originStack.pop();
-        IndexNode lastUpdateDir = updateStack.pop();
-        Set<String> createdOtherChildNames = otherChildNamesVisited.remove(lastUpdateDir);
+        IndexNode lastCurrentDir = currentStack.pop();
+        Set<String> createdCurrentChildNames = currentChildNamesVisited.remove(lastCurrentDir);
 
-        if (createdOtherChildNames != null && !createdOtherChildNames.isEmpty()) {
-            for (String name : createdOtherChildNames) {
-                IndexNode newChild = lastUpdateDir.getChildByName(name);
+        if (createdCurrentChildNames != null && !createdCurrentChildNames.isEmpty()) {
+            for (String name : createdCurrentChildNames) {
+                IndexNode newChild = lastCurrentDir.getChildByName(name);
                 assert newChild != null;
                 created(lastOriginDir, newChild);
             }
@@ -113,19 +114,15 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
         return super.postVisitDirectory(dir);
     }
 
-    private void created(IndexNode parent, IndexNode otherFile) {
-        changes.add(new IndexNodeChange(IndexNodeChange.Change.CREATED, parent, otherFile));
-    }
-
-    private void modified(IndexNode file, IndexNode otherFile) {
-        changes.add(new IndexNodeChange(IndexNodeChange.Change.MODIFIED, file, otherFile));
+    private void created(IndexNode originParent, IndexNode currentFile) {
+        changes.add(new IndexNodeChange(IndexNodeChange.Change.CREATED, originParent, currentFile));
     }
 
     private void modified(IndexNodeChange change) {
         changes.add(change);
     }
 
-    private void removed(IndexNode file) {
-        changes.add(new IndexNodeChange(IndexNodeChange.Change.REMOVED, file, null));
+    private void removed(IndexNode originFile) {
+        changes.add(new IndexNodeChange(IndexNodeChange.Change.REMOVED, originFile, null));
     }
 }

@@ -7,5 +7,5 @@ import de.silef.service.file.node.IndexNode;
  */
 public interface IndexNodeChangeFactory {
 
-    IndexNodeChange createIndexNodeChange(IndexNode origin, IndexNode update);
+    IndexNodeChange createIndexNodeChange(IndexNode origin, IndexNode current);
 }
