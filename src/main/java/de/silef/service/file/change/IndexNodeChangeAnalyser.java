@@ -7,5 +7,5 @@ import de.silef.service.file.node.IndexNode;
  */
 public interface IndexNodeChangeAnalyser {
 
-    IndexNodeChange.Change analyse(IndexNode primary, IndexNode other);
+    IndexNodeChange.Change analyse(IndexNode origin, IndexNode update);
 }

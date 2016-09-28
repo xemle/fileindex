@@ -74,19 +74,19 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
     }
 
     @Override
-    public IndexNodeChange.Change analyse(IndexNode primary, IndexNode other) {
-        if (primary.isRoot() && other.isRoot()) {
+    public IndexNodeChange.Change analyse(IndexNode origin, IndexNode update) {
+        if (origin.isRoot() && update.isRoot()) {
             return IndexNodeChange.Change.SAME;
         }
 
-        return analyseExtension(ExtensionType.BASIC_FILE, primary, other);
+        return analyseExtension(ExtensionType.BASIC_FILE, origin, update);
     }
 
-    private IndexNodeChange.Change analyseExtension(ExtensionType type, IndexNode primary, IndexNode other) {
-        IndexExtension primaryExtension = primary.getExtensionByType(type.value);
-        IndexExtension otherExtension = other.getExtensionByType(type.value);
+    private IndexNodeChange.Change analyseExtension(ExtensionType type, IndexNode origin, IndexNode update) {
+        IndexExtension originExtension = origin.getExtensionByType(type.value);
+        IndexExtension updateExtension = update.getExtensionByType(type.value);
 
-        if (primaryExtension != null && otherExtension != null && !Arrays.equals(primaryExtension.getData(), otherExtension.getData())) {
+        if (originExtension != null && updateExtension != null && !Arrays.equals(originExtension.getData(), updateExtension.getData())) {
             return IndexNodeChange.Change.MODIFIED;
         }
         return IndexNodeChange.Change.SAME;

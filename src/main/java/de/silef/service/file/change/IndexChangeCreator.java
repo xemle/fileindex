@@ -17,9 +17,9 @@ public class IndexChangeCreator {
         this.changeAnalyser = changeAnalyser;
     }
 
-    public IndexChange create(Path base, IndexNode primary, IndexNode other) {
-        IndexNodeChangeVisitor visitor = new IndexNodeChangeVisitor(other, changeAnalyser);
-        IndexNodeWalker.walk(primary, visitor);
+    public IndexChange create(Path base, IndexNode origin, IndexNode update) {
+        IndexNodeChangeVisitor visitor = new IndexNodeChangeVisitor(update, changeAnalyser);
+        IndexNodeWalker.walk(origin, visitor);
         return new IndexChange(base, visitor.getChanges());
     }
 }

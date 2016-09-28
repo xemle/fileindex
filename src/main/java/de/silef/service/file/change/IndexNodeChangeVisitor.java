@@ -15,8 +15,8 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
 
     private IndexNode otherRoot;
 
-    private Stack<IndexNode> primaryStack = new Stack<>();
-    private Stack<IndexNode> otherStack = new Stack<>();
+    private Stack<IndexNode> originStack = new Stack<>();
+    private Stack<IndexNode> updateStack = new Stack<>();
 
     private Map<IndexNode, Set<String>> otherChildNamesVisited = new HashMap<>();
 
@@ -38,7 +38,7 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
             return super.preVisitDirectory(dir);
         }
 
-        IndexNode otherParent = otherStack.peek();
+        IndexNode otherParent = updateStack.peek();
         IndexNode otherDir = otherParent.getChildByName(dir.getName());
         otherChildNamesVisited.get(otherParent).remove(dir.getName());
 
@@ -55,8 +55,8 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
         if (change == IndexNodeChange.Change.MODIFIED) {
             modified(dir, otherDir);
         }
-        primaryStack.push(dir);
-        otherStack.push(otherDir);
+        originStack.push(dir);
+        updateStack.push(otherDir);
 
         Set<String> names = otherDir.getChildNames();
         otherChildNamesVisited.put(otherDir, names);
@@ -64,8 +64,8 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
     }
 
     private void preVisitDirectoryRoot(IndexNode root) {
-        primaryStack.push(root);
-        otherStack.push(otherRoot);
+        originStack.push(root);
+        updateStack.push(otherRoot);
 
         IndexNodeChange.Change change = changeInspector.analyse(root, otherRoot);
         if (change == IndexNodeChange.Change.MODIFIED) {
@@ -78,7 +78,7 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
 
     @Override
     public VisitorResult visitFile(IndexNode file) throws IOException {
-        IndexNode otherParent = otherStack.peek();
+        IndexNode otherParent = updateStack.peek();
         otherChildNamesVisited.get(otherParent).remove(file.getName());
 
         IndexNode otherFile = otherParent.getChildByName(file.getName());
@@ -99,15 +99,15 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
 
     @Override
     public VisitorResult postVisitDirectory(IndexNode dir) throws IOException {
-        IndexNode lastPrimaryDir = primaryStack.pop();
-        IndexNode lastOtherDir = otherStack.pop();
-        Set<String> createdOtherChildNames = otherChildNamesVisited.remove(lastOtherDir);
+        IndexNode lastOriginDir = originStack.pop();
+        IndexNode lastUpdateDir = updateStack.pop();
+        Set<String> createdOtherChildNames = otherChildNamesVisited.remove(lastUpdateDir);
 
         if (createdOtherChildNames != null && !createdOtherChildNames.isEmpty()) {
             for (String name : createdOtherChildNames) {
-                IndexNode newChild = lastOtherDir.getChildByName(name);
+                IndexNode newChild = lastUpdateDir.getChildByName(name);
                 assert newChild != null;
-                created(lastPrimaryDir, newChild);
+                created(lastOriginDir, newChild);
             }
         }
         return super.postVisitDirectory(dir);
