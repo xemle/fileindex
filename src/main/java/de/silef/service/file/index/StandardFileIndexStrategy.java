@@ -1,7 +1,7 @@
 package de.silef.service.file.index;
 
 import de.silef.service.file.change.IndexNodeChange;
-import de.silef.service.file.change.IndexNodeChangeAnalyser;
+import de.silef.service.file.change.IndexNodeChangeFactory;
 import de.silef.service.file.extension.*;
 import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.node.IndexNodeFactory;
@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Created by sebastian on 23.09.16.
  */
-public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePathFactory, PathInfoFilter, IndexNodeChangeAnalyser {
+public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePathFactory, PathInfoFilter, IndexNodeChangeFactory {
 
     @Override
     public IndexNode createIndexNode(IndexNode parent, IndexNodeType type, String name, List<IndexExtension> extensions) {
@@ -74,12 +74,13 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
     }
 
     @Override
-    public IndexNodeChange.Change analyse(IndexNode origin, IndexNode update) {
+    public IndexNodeChange createIndexNodeChange(IndexNode origin, IndexNode update) {
         if (origin.isRoot() && update.isRoot()) {
-            return IndexNodeChange.Change.SAME;
+            return new IndexNodeChange(IndexNodeChange.Change.SAME, origin, update);
         }
 
-        return analyseExtension(ExtensionType.BASIC_FILE, origin, update);
+        IndexNodeChange.Change change = analyseExtension(ExtensionType.BASIC_FILE, origin, update);
+        return new IndexNodeChange(change, origin, update);
     }
 
     private IndexNodeChange.Change analyseExtension(ExtensionType type, IndexNode origin, IndexNode update) {

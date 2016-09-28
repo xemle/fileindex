@@ -20,11 +20,11 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
 
     private Map<IndexNode, Set<String>> otherChildNamesVisited = new HashMap<>();
 
-    private IndexNodeChangeAnalyser changeInspector;
+    private IndexNodeChangeFactory changeFactory;
 
-    public IndexNodeChangeVisitor(IndexNode otherRoot, IndexNodeChangeAnalyser changeInspector) {
+    public IndexNodeChangeVisitor(IndexNode otherRoot, IndexNodeChangeFactory changeFactory) {
         this.otherRoot = otherRoot;
-        this.changeInspector = changeInspector;
+        this.changeFactory = changeFactory;
     }
 
     public List<IndexNodeChange> getChanges() {
@@ -51,9 +51,9 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
             return VisitorResult.SKIP;
         }
 
-        IndexNodeChange.Change change = changeInspector.analyse(dir, otherDir);
-        if (change == IndexNodeChange.Change.MODIFIED) {
-            modified(dir, otherDir);
+        IndexNodeChange nodeChange = changeFactory.createIndexNodeChange(dir, otherDir);
+        if (nodeChange.getChange() == IndexNodeChange.Change.MODIFIED) {
+            modified(nodeChange);
         }
         originStack.push(dir);
         updateStack.push(otherDir);
@@ -67,9 +67,9 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
         originStack.push(root);
         updateStack.push(otherRoot);
 
-        IndexNodeChange.Change change = changeInspector.analyse(root, otherRoot);
-        if (change == IndexNodeChange.Change.MODIFIED) {
-            modified(root, otherRoot);
+        IndexNodeChange rootChange = changeFactory.createIndexNodeChange(root, otherRoot);
+        if (rootChange.getChange() == IndexNodeChange.Change.MODIFIED) {
+            modified(rootChange);
         }
 
         Set<String> names = otherRoot.getChildNames();
@@ -88,9 +88,9 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
             removed(file);
             created(file.getParent(), otherFile);
         } else {
-            IndexNodeChange.Change change = changeInspector.analyse(file, otherFile);
-            if (change == IndexNodeChange.Change.MODIFIED) {
-                modified(file, otherFile);
+            IndexNodeChange nodeChange = changeFactory.createIndexNodeChange(file, otherFile);
+            if (nodeChange.getChange() == IndexNodeChange.Change.MODIFIED) {
+                modified(nodeChange);
             }
         }
 
@@ -119,6 +119,10 @@ public class IndexNodeChangeVisitor extends Visitor<IndexNode> {
 
     private void modified(IndexNode file, IndexNode otherFile) {
         changes.add(new IndexNodeChange(IndexNodeChange.Change.MODIFIED, file, otherFile));
+    }
+
+    private void modified(IndexNodeChange change) {
+        changes.add(change);
     }
 
     private void removed(IndexNode file) {

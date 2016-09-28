@@ -2,7 +2,7 @@ package de.silef.service.file.index;
 
 import de.silef.service.file.change.IndexChange;
 import de.silef.service.file.change.IndexChangeCreator;
-import de.silef.service.file.change.IndexNodeChangeAnalyser;
+import de.silef.service.file.change.IndexNodeChangeFactory;
 import de.silef.service.file.extension.BasicFileIndexExtension;
 import de.silef.service.file.extension.ExtensionType;
 import de.silef.service.file.node.IndexNode;
@@ -51,8 +51,8 @@ public class FileIndex {
         return new FileIndex(base, root);
     }
 
-    public IndexChange getChanges(FileIndex other, IndexNodeChangeAnalyser changeAnalyser) {
-        IndexChangeCreator changeCreator = new IndexChangeCreator(changeAnalyser);
+    public IndexChange getChanges(FileIndex other, IndexNodeChangeFactory changeFactory) {
+        IndexChangeCreator changeCreator = new IndexChangeCreator(changeFactory);
         return changeCreator.create(this.getBase(), this.getRoot(), other.getRoot());
     }
 

@@ -71,8 +71,8 @@ public class FileIndexCli {
         writeIndex(index, indexFile);
     }
 
-    private IndexChange getIndexChanges(StandardFileIndexStrategy strategy, FileIndex index, FileIndex currentIndex) {
-        IndexChange changes = index.getChanges(currentIndex, strategy);
+    private IndexChange getIndexChanges(StandardFileIndexStrategy indexStrategy, FileIndex index, FileIndex currentIndex) {
+        IndexChange changes = index.getChanges(currentIndex, indexStrategy);
         printChange(changes);
         return changes;
     }
