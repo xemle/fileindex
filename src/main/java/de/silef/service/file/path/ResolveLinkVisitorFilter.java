@@ -42,8 +42,9 @@ public class ResolveLinkVisitorFilter extends Visitor<PathInfo> {
         if (pathInfo.isSymbolicLink()) {
             try {
                 Path target = Files.readSymbolicLink(pathInfo.getPath());
-                Path resolved = pathInfo.getPath().getParent().resolve(target).toAbsolutePath();
-                return resolved.startsWith(base);
+                Path parentPath = pathInfo.getPath().getParent();
+                Path resolvedLink = parentPath.resolve(target).toAbsolutePath();
+                return resolvedLink.startsWith(base);
             } catch (NoSuchFileException e) {
                 LOG.warn("Failed to resolve link: {}", pathInfo.getPath());
                 return false;
