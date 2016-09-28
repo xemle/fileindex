@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Created by sebastian on 23.09.16.
  */
-public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePathFactory, IndexNodeChangeAnalyser, PathInfoFilter {
+public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePathFactory, PathInfoFilter, IndexNodeChangeAnalyser {
 
     @Override
     public IndexNode createIndexNode(IndexNode parent, IndexNodeType type, String name, List<IndexExtension> extensions) {
