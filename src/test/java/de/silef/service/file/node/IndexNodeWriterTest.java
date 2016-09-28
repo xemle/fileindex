@@ -39,7 +39,7 @@ public class IndexNodeWriterTest extends BasePathTest {
         new IndexNodeWriter().write(cache.getRoot(), fileindex);
 
 
-        IndexNode root = new IndexNodeReader(indexStrategy).read(base, fileindex);
+        IndexNode root = new IndexNodeReader(indexStrategy).read(fileindex);
 
 
         FileIndex index = new FileIndex(base, root);

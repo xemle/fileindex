@@ -25,7 +25,7 @@ public class IndexNodeReader {
         this.nodeFactory = nodeFactory;
     }
 
-    public IndexNode read(Path base, Path file) throws IOException {
+    public IndexNode read(Path file) throws IOException {
         try (InputStream input = Files.newInputStream(file)) {
             return read(input);
         }

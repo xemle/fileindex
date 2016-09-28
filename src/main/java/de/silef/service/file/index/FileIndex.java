@@ -47,7 +47,7 @@ public class FileIndex {
     }
 
     public static FileIndex readFromPath(Path base, Path indexfile, IndexNodeFactory nodeFactory) throws IOException {
-        IndexNode root = new IndexNodeReader(nodeFactory).read(base, indexfile);
+        IndexNode root = new IndexNodeReader(nodeFactory).read(indexfile);
         return new FileIndex(base, root);
     }
 
