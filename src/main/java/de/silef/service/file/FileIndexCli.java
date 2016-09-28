@@ -250,7 +250,7 @@ public class FileIndexCli {
         if (cmd.hasOption("i")) {
             indexFile = Paths.get(cmd.getOptionValue("i"));
         } else {
-            String indexName = base.toRealPath().getFileName() + ".index2";
+            String indexName = base.toRealPath().getFileName() + ".index";
             indexFile = indexDir.resolve(indexName);
             LOG.debug("Use default index file: {}", indexFile);
         }
