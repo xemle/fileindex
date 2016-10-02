@@ -6,8 +6,10 @@ import de.silef.service.file.util.HashUtil;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
 
 /**
  * Created by sebastian on 23.09.16.
@@ -24,14 +26,15 @@ public class FileContentHashIndexExtension extends StandardIndexExtension {
     }
 
     public static FileContentHashIndexExtension create(Path file) throws IOException {
-        if (!Files.isSymbolicLink(file) && !Files.isRegularFile(file)) {
+        BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        if (!attributes.isSymbolicLink() && !attributes.isRegularFile()) {
             throw new IllegalArgumentException("File content hash is only allowed on files and symbolic links: " + file);
         }
-        long size = Files.size(file);
+        long size = attributes.isSymbolicLink() ? 0L : attributes.size();
         byte[] sizeBytes = DataUtils.toBytes(size);
 
         try (InputStream sizeInput = new ByteArrayInputStream(sizeBytes);
-             InputStream fileInput = getFileInputStream(file);
+             InputStream fileInput = getFileInputStream(file, attributes);
              InputStream sequenceInput = new SequenceInputStream(sizeInput, fileInput)) {
 
             byte[] hash = HashUtil.getHash(sequenceInput);
@@ -40,8 +43,8 @@ public class FileContentHashIndexExtension extends StandardIndexExtension {
         }
     }
 
-    private static InputStream getFileInputStream(Path file) throws IOException {
-        if (Files.isSymbolicLink(file)) {
+    private static InputStream getFileInputStream(Path file, BasicFileAttributes attributes) throws IOException {
+        if (attributes.isSymbolicLink()) {
             Path target = Files.readSymbolicLink(file);
             return new ByteArrayInputStream(target.toString().getBytes(StandardCharsets.UTF_8));
         } else {
