@@ -105,6 +105,11 @@ public class IndexNode implements Serializable {
         }
     }
 
+    public void setExtensions(List<IndexExtension> extensions) {
+        typeToExtension.clear();
+        addAllExtensions(extensions);
+    }
+
     public IndexExtension removeExtensionType(byte type) {
         return typeToExtension.remove(type);
     }
@@ -181,5 +186,4 @@ public class IndexNode implements Serializable {
     public String toString() {
         return nodeType + " " + getRelativePath();
     }
-
 }

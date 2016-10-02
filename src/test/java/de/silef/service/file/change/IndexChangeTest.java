@@ -1,5 +1,6 @@
 package de.silef.service.file.change;
 
+import de.silef.service.file.extension.FileContentHashIndexExtension;
 import de.silef.service.file.extension.IndexExtension;
 import de.silef.service.file.index.FileIndex;
 import de.silef.service.file.node.IndexNode;
@@ -159,12 +160,36 @@ public class IndexChangeTest extends BasePathTest {
         verifyExtensions(oldFooTxt, updateFooTxt.getExtensions());
     }
 
+    @Test
+    public void applyModifiedShouldRemoveExistingExtensions() throws IOException {
+        Files.write(tmp.resolve("foo.txt"), "content".getBytes());
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
+        IndexNode foo = old.getRoot().getChildByName("foo.txt");
+        foo.addExtension(FileContentHashIndexExtension.create(tmp.resolve("foo.txt")));
+
+        Files.write(tmp.resolve("foo.txt"), "update".getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
+
+        IndexChange changes = old.getChanges(update, indexStrategy);
+
+        IndexNode updateFooTxt = update.getRoot().getChildByName("foo.txt");
+
+
+        changes.apply();
+
+
+        assertThat(foo, is(not(nullValue())));
+        IndexNode oldFooTxt = old.getRoot().getChildByName("foo.txt");
+        verifyExtensions(oldFooTxt, updateFooTxt.getExtensions());
+    }
+
     private void verifyExtensions(IndexNode node, List<IndexExtension> extensions) {
         for (IndexExtension extension : extensions) {
             IndexExtension nodeExtension = node.getExtensionByType(extension.getType());
             assertThat(nodeExtension, is(not(nullValue())));
             assertThat(nodeExtension.getData(), is(extension.getData()));
         }
+        assertThat(node.getExtensions().size(), is(extensions.size()));
     }
 
     @Test

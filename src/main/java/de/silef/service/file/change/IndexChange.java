@@ -51,7 +51,7 @@ public class IndexChange {
                 }
                 origin.addChild(update);
             } else if (nodeChange.getChange() == IndexNodeChange.Change.MODIFIED) {
-                origin.addAllExtensions(update.getExtensions());
+                origin.setExtensions(update.getExtensions());
             } else if (nodeChange.getChange() == IndexNodeChange.Change.REMOVED) {
                 origin.getParent().removeChildByName(origin.getName());
             }

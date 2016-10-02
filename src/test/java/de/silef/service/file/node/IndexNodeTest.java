@@ -1,5 +1,9 @@
 package de.silef.service.file.node;
 
+import de.silef.service.file.extension.BasicFileIndexExtension;
+import de.silef.service.file.extension.ExtensionType;
+import de.silef.service.file.extension.FileContentHashIndexExtension;
+import de.silef.service.file.extension.IndexExtension;
 import de.silef.service.file.test.BaseTest;
 import de.silef.service.file.test.PathUtils;
 import org.junit.Test;
@@ -8,10 +12,12 @@ import org.mockito.Mockito;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static de.silef.service.file.extension.ExtensionType.FILE_HASH;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
@@ -184,6 +190,47 @@ public class IndexNodeTest extends BaseTest {
         assertThat(result, is(childMock));
     }
 
+    @Test
+    public void setExtensionShouldRemoveAllExtensionsOnEmptyList() throws IOException {
+        Path base = PathUtils.getResourcePath("index");
+
+        IndexNode root = indexStrategy.createIndexNode(null, indexStrategy.createPathInfo(base));
+
+
+        root.setExtensions(new ArrayList<>());
+
+
+        assertThat(root.getExtensions().isEmpty(), is(true));
+    }
+
+    @Test
+    public void setExtensionShouldReplaceAllExtensions() throws IOException {
+        Path base = PathUtils.getResourcePath("index");
+
+        IndexNode root = indexStrategy.createIndexNode(null, indexStrategy.createPathInfo(base));
+        IndexExtension extension = new FileContentHashIndexExtension("00000000000000000000".getBytes());
+
+        root.setExtensions(Arrays.asList(extension));
+
+
+        assertThat(root.getExtensions().size(), is(1));
+        assertThat(new String(root.getExtensionByType(FILE_HASH.value).getData()), is("00000000000000000000"));
+    }
+
+    @Test
+    public void addExtensionShouldReplaceExtension() throws IOException {
+        Path base = PathUtils.getResourcePath("index");
+
+        IndexNode root = indexStrategy.createIndexNode(null, indexStrategy.createPathInfo(base));
+        root.addExtension(new FileContentHashIndexExtension("00000000000000000000".getBytes()));
+
+
+        root.addExtension(new FileContentHashIndexExtension("11111111111111111111".getBytes()));
+
+
+        assertThat(new String(root.getExtensionByType(FILE_HASH.value).getData()), is("11111111111111111111"));
+    }
+    
     private IndexNode createFromPath(IndexNode parent, Path path) throws IOException {
         IndexNodeType nodeType = IndexNodeType.create(path);
         boolean isRootNode = parent == null;
