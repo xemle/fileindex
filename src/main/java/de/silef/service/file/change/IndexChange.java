@@ -4,6 +4,7 @@ import de.silef.service.file.node.IndexNode;
 
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +32,25 @@ public class IndexChange {
 
     public List<IndexNodeChange> getChanges() {
         return changes;
+    }
+
+    public List<IndexNodeChange> getExpandedChanges() {
+        List<IndexNodeChange> expanded = new LinkedList<>();
+        changes.stream()
+                .filter(c -> c.getChange() == IndexNodeChange.Change.CREATED && c.getUpdate().isDirectory())
+                .forEach(c -> c.getUpdate().stream()
+                        .filter(n -> n != c.getUpdate())
+                        .forEach(n -> expanded.add(new IndexNodeChange(IndexNodeChange.Change.CREATED, n.getParent(), n))));
+        changes.stream()
+                .filter(c -> c.getChange() == IndexNodeChange.Change.REMOVED && c.getOrigin().isDirectory())
+                .forEach(c -> c.getOrigin().stream()
+                        .filter(n -> n != c.getOrigin())
+                        .forEach(n -> expanded.add(new IndexNodeChange(IndexNodeChange.Change.REMOVED, n, null))));
+
+        expanded.addAll(changes);
+        return expanded.stream()
+                .sorted((a, b) -> a.getOrigin().getRelativePath().compareTo(b.getOrigin().getRelativePath()))
+                .collect(Collectors.toList());
     }
 
     public void apply() {

@@ -2,6 +2,7 @@ package de.silef.service.file;
 
 import de.silef.service.file.change.IndexChange;
 import de.silef.service.file.change.IndexNodeChange;
+import de.silef.service.file.change.IndexNodeChangeFactory;
 import de.silef.service.file.extension.*;
 import de.silef.service.file.index.FileIndex;
 import de.silef.service.file.index.StandardFileIndexStrategy;
@@ -66,7 +67,49 @@ public class FileIndexCli {
             writeIndex(index, indexFile);
         }
 
+        executeDiff(base, index, indexStrategy);
         executeDeduplication(base, index, indexStrategy);
+    }
+
+    private void executeDiff(Path base, FileIndex index, StandardFileIndexStrategy indexStrategy) throws IOException {
+        if (!cmd.hasOption("diff") && !cmd.hasOption("diff-full")) {
+            return;
+        }
+
+        Path otherBase = base;
+        Path otherIndexFile;
+        if (cmd.hasOption("other-dir")) {
+            otherBase = Paths.get(cmd.getOptionValue("other-dir"));
+        }
+        if (cmd.hasOption("other-index")) {
+            otherIndexFile = Paths.get(cmd.getOptionValue("other-index"));
+        } else if (cmd.hasOption("I")) {
+            String indexFile = otherBase.getFileName() + ".index";
+            otherIndexFile = Paths.get(cmd.getOptionValue("I")).resolve(indexFile);
+        } else {
+            System.err.println("Missing option --other-index for option --diff");
+            System.exit(1);
+            return;
+        }
+
+        FileIndex otherIndex = readIndex(otherBase, otherIndexFile, indexStrategy);
+
+        IndexChange change = index.getChanges(otherIndex, (origin, current) -> {
+            if (origin.isDirectory()) {
+                return new IndexNodeChange(IndexNodeChange.Change.SAME, origin, current);
+            }
+            FileContentHashIndexExtension originHash = (FileContentHashIndexExtension) origin.getExtensionByType(FILE_HASH.value);
+            FileContentHashIndexExtension currentHash = (FileContentHashIndexExtension) current.getExtensionByType(FILE_HASH.value);
+            if (originHash != null && currentHash != null && Arrays.equals(originHash.getData(), currentHash.getData())) {
+                return new IndexNodeChange(IndexNodeChange.Change.SAME, origin, current);
+            }
+            return new IndexNodeChange(IndexNodeChange.Change.MODIFIED, origin, current);
+        });
+
+        if (cmd.hasOption("diff-full")) {
+            change = new IndexChange(change.getBase(), change.getExpandedChanges());
+        }
+        printChange(change);
     }
 
     private void executeDeduplication(Path base, FileIndex index, StandardFileIndexStrategy indexStrategy) throws IOException {
@@ -211,7 +254,7 @@ public class FileIndexCli {
 
     private void executeUpdateIndex(Path base, StandardFileIndexStrategy indexStrategy, FileIndex index) throws IOException {
         FileIndex currentIndex = buildIndexFromPath(base, indexStrategy);
-        IndexChange changes = getIndexChanges(indexStrategy, index, currentIndex);
+        IndexChange changes = getIndexChanges(index, currentIndex, indexStrategy);
 
         if (cmd.hasOption('n')) {
             return;
@@ -221,9 +264,9 @@ public class FileIndexCli {
         LOG.debug("Applied {} changes to the index", changes.getChanges().size());
     }
 
-    private IndexChange getIndexChanges(StandardFileIndexStrategy indexStrategy, FileIndex index, FileIndex currentIndex) {
+    private IndexChange getIndexChanges(FileIndex index, FileIndex currentIndex, IndexNodeChangeFactory indexStrategy) {
         IndexChange changes = index.getChanges(currentIndex, indexStrategy);
-        LOG.debug("Update index with {} changes: {} files created, {} files changed, {} files removed", changes.getChanges().size(), changes.getCreated().size(), changes.getModified().size(), changes.getRemoved().size());
+        LOG.debug("Index has {} changes: {} files created, {} files changed, {} files removed", changes.getChanges().size(), changes.getCreated().size(), changes.getModified().size(), changes.getRemoved().size());
         printChange(changes);
         return changes;
     }
@@ -446,17 +489,17 @@ public class FileIndexCli {
         changes.getChanges()
                 .stream()
                 .sorted((a, b) -> a.getRelativePath().compareTo(b.getRelativePath()))
-                .map(c -> getChangeChar(c.getChange()) + "  " + c.getRelativePath())
+                .map(c -> getChangeIcon(c) + "  " + c.getRelativePath())
                 .forEach(System.out::println);
     }
 
-    private String getChangeChar(IndexNodeChange.Change change) {
-        if (change == IndexNodeChange.Change.CREATED) {
-            return "C";
-        } else if (change == IndexNodeChange.Change.MODIFIED) {
-            return "M";
+    private String getChangeIcon(IndexNodeChange change) {
+        if (change.getChange() == IndexNodeChange.Change.CREATED) {
+            return "C" + (change.getUpdate().isDirectory() ? "D" : " ");
+        } else if (change.getChange() == IndexNodeChange.Change.MODIFIED) {
+            return "M" + (change.getUpdate().isDirectory() ? "D" : " ");
         } else {
-            return "R";
+            return "R" + (change.getOrigin().isDirectory() ? "D" : " ");
         }
     }
 
@@ -538,6 +581,16 @@ public class FileIndexCli {
                 .longOpt("integrity")
                 .hasArg(false)
                 .desc("Create content hashes")
+                .build());
+        options.addOption(Option.builder()
+                .longOpt("diff")
+                .hasArg(false)
+                .desc("Show difference between another index via --other-dir or --other-index")
+                .build());
+        options.addOption(Option.builder()
+                .longOpt("diff-full")
+                .hasArg(false)
+                .desc("Same as --diff but shows also files of created or removed directories")
                 .build());
         options.addOption(Option.builder()
                 .longOpt("deduplicate")
