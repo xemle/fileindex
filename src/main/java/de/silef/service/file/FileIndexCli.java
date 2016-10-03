@@ -99,19 +99,37 @@ public class FileIndexCli {
             if (origin.isDirectory()) {
                 return new IndexNodeChange(IndexNodeChange.Change.SAME, origin, current);
             }
-            FileContentHashIndexExtension originHash = (FileContentHashIndexExtension) origin.getExtensionByType(FILE_HASH.value);
-            FileContentHashIndexExtension currentHash = (FileContentHashIndexExtension) current.getExtensionByType(FILE_HASH.value);
-            if (originHash != null && currentHash != null && Arrays.equals(originHash.getData(), currentHash.getData())) {
-                return new IndexNodeChange(IndexNodeChange.Change.SAME, origin, current);
+            if (hasAttributeChanges(origin, current) || hasContentHashChanges(origin, current)) {
+                return new IndexNodeChange(IndexNodeChange.Change.MODIFIED, origin, current);
             }
-            return new IndexNodeChange(IndexNodeChange.Change.MODIFIED, origin, current);
+            return new IndexNodeChange(IndexNodeChange.Change.SAME, origin, current);
         });
 
         if (cmd.hasOption("diff-full")) {
             change.expandChanges();
         }
         change.detectMoves();
+        LOG.info("Index diff has {} changes: {} created, {} modified, {} moves, and {} removes", change.getChanges().size(), change.getCreated().size(), change.getModified().size(), change.getMoved().size(), change.getRemoved().size());
+
         printChange(change);
+    }
+
+    private boolean hasAttributeChanges(IndexNode origin, IndexNode current) {
+        BasicFileIndexExtension originAttribute = (BasicFileIndexExtension) origin.getExtensionByType(BASIC_FILE.value);
+        BasicFileIndexExtension currentAttribute = (BasicFileIndexExtension) current.getExtensionByType(BASIC_FILE.value);
+        if (originAttribute == null || currentAttribute == null) {
+            return false;
+        }
+        return originAttribute.getSize() != currentAttribute.getSize() ||
+                originAttribute.getCreationTime() != currentAttribute.getCreationTime() ||
+                originAttribute.getModifiedTime() != currentAttribute.getModifiedTime();
+    }
+
+    private boolean hasContentHashChanges(IndexNode origin, IndexNode current) {
+        FileContentHashIndexExtension originHash = (FileContentHashIndexExtension) origin.getExtensionByType(FILE_HASH.value);
+        FileContentHashIndexExtension currentHash = (FileContentHashIndexExtension) current.getExtensionByType(FILE_HASH.value);
+
+        return originHash != null && currentHash != null && !Arrays.equals(originHash.getData(), currentHash.getData());
     }
 
     private void executeDeduplication(Path base, FileIndex index, StandardFileIndexStrategy indexStrategy) throws IOException {
