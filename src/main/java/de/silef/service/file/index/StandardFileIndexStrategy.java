@@ -6,14 +6,15 @@ import de.silef.service.file.extension.*;
 import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.node.IndexNodeFactory;
 import de.silef.service.file.node.IndexNodeType;
-import de.silef.service.file.path.PathInfoFilter;
 import de.silef.service.file.path.IndexNodePathFactory;
 import de.silef.service.file.path.PathInfo;
+import de.silef.service.file.path.PathInfoFilter;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.List;
@@ -71,6 +72,35 @@ public class StandardFileIndexStrategy implements IndexNodeFactory, IndexNodePat
             //node.addExtension(UnixFileIndexExtension.createFromPath(path));
         }
         return node;
+    }
+
+    @Override
+    public boolean createHardLink(PathInfo link, PathInfo existing) throws IOException {
+        if (haveSameFileKey(link, existing)) {
+            return false;
+        }
+
+        Path linkPath = link.getPath();
+        Path tmp = linkPath.getParent().resolve(link.getFileName() + ".tmp");
+        try {
+            Files.move(linkPath, tmp, StandardCopyOption.REPLACE_EXISTING);
+            Files.createLink(linkPath, existing.getPath());
+            Files.setAttribute(linkPath, "creationTime", link.getAttributes().creationTime());
+            Files.setAttribute(linkPath, "lastModifiedTime", link.getAttributes().lastAccessTime());
+            Files.delete(tmp);
+        } catch (IOException e) {
+            if (Files.exists(tmp)) {
+                Files.move(tmp, linkPath);
+            }
+            throw e;
+        }
+        return true;
+    }
+
+    private boolean haveSameFileKey(PathInfo one, PathInfo other) throws IOException {
+        Object oneKey = one.getAttributes().fileKey();
+        Object otherKey = other.getAttributes().fileKey();
+        return oneKey != null && otherKey != null && oneKey.toString().equals(otherKey.toString());
     }
 
     @Override

@@ -9,6 +9,7 @@ import de.silef.service.file.node.IndexNode;
 import de.silef.service.file.node.IndexNodeFactory;
 import de.silef.service.file.node.IndexNodeWalker;
 import de.silef.service.file.path.IndexNodePathFactory;
+import de.silef.service.file.path.PathInfo;
 import de.silef.service.file.path.PathInfoFilter;
 import de.silef.service.file.tree.Visitor;
 import de.silef.service.file.util.ByteUtil;
@@ -22,9 +23,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static de.silef.service.file.extension.ExtensionType.*;
 
@@ -51,35 +54,185 @@ public class FileIndexCli {
         StandardFileIndexStrategy indexStrategy = new StandardFileIndexStrategy();
 
         if (!Files.exists(indexFile)) {
-            FileIndex index = buildIndexFromPath(base, indexStrategy);
-            calculateHashes(indexFile, index);
-            writeIndex(index, indexFile);
+            executeCreateIndex(base, indexFile, indexStrategy);
             return;
         }
 
         FileIndex index = readIndex(base, indexFile, indexStrategy);
-        FileIndex currentIndex = buildIndexFromPath(base, indexStrategy);
 
-        IndexChange changes = getIndexChanges(indexStrategy, index, currentIndex);
-
-        if (cmd.hasOption('n')) {
-            System.exit(0);
+        if (cmd.hasOption("u")) {
+            executeUpdateIndex(base, indexStrategy, index);
+            calculateHashes(indexFile, index);
+            writeIndex(index, indexFile);
         }
 
-        index.applyChanges(changes);
+        executeDeduplication(base, index, indexStrategy);
+    }
+
+    private void executeDeduplication(Path base, FileIndex index, StandardFileIndexStrategy indexStrategy) throws IOException {
+        if (!cmd.hasOption("deduplicate")) {
+            return;
+        }
+
+        if (cmd.hasOption("other-dir")) {
+            executeDeduplicateWithOtherIndex(base, index, indexStrategy);
+            return;
+        }
+
+        Map<String, List<IndexNode>> hashToNodes = createHashToNodes(index);
+
+        long hardLinkCount = 0;
+        long savedBytes = 0;
+        for (Map.Entry<String, List<IndexNode>> entry : hashToNodes.entrySet()) {
+            if (entry.getValue().size() < 2) {
+                continue;
+            }
+            Iterator<IndexNode> it = entry.getValue().iterator();
+
+            Path existingPath = base.resolve(it.next().getRelativePath());
+            PathInfo existingInfo = indexStrategy.createPathInfo(existingPath);
+
+            while (it.hasNext()) {
+                Path linkPath = base.resolve(it.next().getRelativePath());
+                PathInfo linkInfo = indexStrategy.createPathInfo(linkPath);
+                try {
+                    if (indexStrategy.createHardLink(linkInfo, existingInfo)) {
+                        LOG.trace("Created hard link from {} to {}", linkPath, existingPath);
+                        hardLinkCount++;
+                        savedBytes += existingInfo.getAttributes().size();
+                    }
+                } catch (IOException e) {
+                    LOG.error("Could not create hard link from {} to {}", linkPath, existingPath, e);
+                }
+            }
+        }
+        LOG.info("Created {} duplicate files with hard links. Saved {}", hardLinkCount, ByteUtil.toHumanSize(savedBytes));
+    }
+
+    private void executeDeduplicateWithOtherIndex(Path base, FileIndex index, StandardFileIndexStrategy indexStrategy) throws IOException {
+        FileIndex otherIndex = readOtherIndex(indexStrategy);
+        if (otherIndex == null) {
+            return;
+        }
+
+        Map<String, List<IndexNode>> hashToNodes = createHashToNodes(index);
+        Map<String, List<IndexNode>> otherHashToNodes = createHashToNodes(otherIndex);
+
+        long hardLinkCount = 0;
+        long savedBytes = 0;
+        for (Map.Entry<String, List<IndexNode>> entry : hashToNodes.entrySet()) {
+            List<IndexNode> otherNodes = otherHashToNodes.get(entry.getKey());
+            if (otherNodes == null) {
+                continue;
+            }
+            IndexNode targetNode = entry.getValue().get(0);
+            Path existing = base.resolve(targetNode.getRelativePath());
+            PathInfo existingInfo = indexStrategy.createPathInfo(existing);
+
+            for (IndexNode otherNode : otherNodes) {
+                Path link = otherIndex.getBase().resolve(otherNode.getRelativePath());
+                PathInfo linkInfo = indexStrategy.createPathInfo(link);
+                try {
+                    if (indexStrategy.createHardLink(linkInfo, existingInfo)) {
+                        LOG.trace("Created hard link from {} to {}", link, existing);
+                        hardLinkCount++;
+                        savedBytes += existingInfo.getAttributes().size();
+                    }
+                } catch (IOException e) {
+                    LOG.error("could not create hard link of {} -> {}", link, existing, e);
+                }
+            }
+        }
+        LOG.info("Deduplicated {} files with hard links. Saved {}", hardLinkCount, ByteUtil.toHumanSize(savedBytes));
+    }
+
+    private FileIndex readOtherIndex(StandardFileIndexStrategy indexStrategy) throws IOException {
+        Path otherBase = Paths.get(cmd.getOptionValue("other-dir"));
+        Path otherIndexFile;
+        if (cmd.hasOption("other-index")) {
+            otherIndexFile = Paths.get(cmd.getOptionValue("other-index"));
+        } else if (cmd.hasOption("I")) {
+            String indexName = otherBase.getFileName() + ".index";
+            otherIndexFile = Paths.get(cmd.getOptionValue("I")).resolve(indexName);
+        } else {
+            System.err.println("Missing option --other-index or -I");
+            System.exit(1);
+            return null;
+        }
+
+        if (!Files.isDirectory(otherBase)) {
+            System.err.println("Other index directory must be an directory: " + otherBase);
+            System.exit(1);
+            return null;
+        } else if (!Files.isRegularFile(otherIndexFile)) {
+            System.err.println("Other index files not found: " + otherIndexFile);
+            System.exit(1);
+        }
+
+        return readIndex(otherBase, otherIndexFile, indexStrategy);
+    }
+
+    private Map<String, List<IndexNode>> createHashToNodes(FileIndex index) {
+        LOG.debug("Building map of file hashes");
+        List<IndexNode> nodes = index.getRoot().stream()
+                .filter(IndexNode::isFile)
+                .filter(n -> !n.isLink())
+                .filter(n -> n.hasExtensionType(FILE_HASH.value))
+                .filter(n -> n.hasExtensionType(BASIC_FILE.value))
+                .filter(n -> (( BasicFileIndexExtension) n.getExtensionByType(BASIC_FILE.value)).getSize() > 0)
+                .collect(Collectors.toList());
+        LOG.debug("Found {} non empty files with content hashes", nodes.size());
+
+        Map<String, List<IndexNode>> hashToNodes = new HashMap<>(nodes.size());
+        long duplicates = 0;
+        for (IndexNode node : nodes) {
+            FileContentHashIndexExtension hashIndexExtension = (FileContentHashIndexExtension) node.getExtensionByType(FILE_HASH.value);
+            String hash = HashUtil.toHex(hashIndexExtension.getData());
+            if (!hashToNodes.containsKey(hash)) {
+                hashToNodes.put(hash, new LinkedList<>());
+            } else {
+                duplicates++;
+            }
+            hashToNodes.get(hash).add(node);
+        }
+        LOG.debug("Found {} duplicates of {} files", duplicates, nodes.size());
+        return hashToNodes;
+    }
+
+    private void executeCreateIndex(Path base, Path indexFile, StandardFileIndexStrategy indexStrategy) throws IOException, java.text.ParseException {
+        if (!cmd.hasOption("c")) {
+            System.err.println("Specify option -c to create index");
+            System.exit(1);
+        }
+        FileIndex index = buildIndexFromPath(base, indexStrategy);
         calculateHashes(indexFile, index);
         writeIndex(index, indexFile);
     }
 
+    private void executeUpdateIndex(Path base, StandardFileIndexStrategy indexStrategy, FileIndex index) throws IOException {
+        FileIndex currentIndex = buildIndexFromPath(base, indexStrategy);
+        IndexChange changes = getIndexChanges(indexStrategy, index, currentIndex);
+
+        if (cmd.hasOption('n')) {
+            return;
+        }
+
+        index.applyChanges(changes);
+        LOG.debug("Applied {} changes to the index", changes.getChanges().size());
+    }
+
     private IndexChange getIndexChanges(StandardFileIndexStrategy indexStrategy, FileIndex index, FileIndex currentIndex) {
         IndexChange changes = index.getChanges(currentIndex, indexStrategy);
+        LOG.debug("Update index with {} changes: {} files created, {} files changed, {} files removed", changes.getChanges().size(), changes.getCreated().size(), changes.getModified().size(), changes.getRemoved().size());
         printChange(changes);
         return changes;
     }
 
     private void calculateHashes(Path indexFile, FileIndex index) throws IOException, java.text.ParseException {
-        updateContentHash(index, indexFile);
-        ensureUniversalHashOfRoot(index);
+        if (cmd.hasOption("integrity")) {
+            updateContentHash(index, indexFile);
+            ensureUniversalHashOfRoot(index);
+        }
     }
 
     private void updateContentHash(FileIndex index, Path indexFile) throws IOException, java.text.ParseException {
@@ -262,17 +415,21 @@ public class FileIndexCli {
     }
 
     private Path getBase() throws IOException {
-        if (cmd.getArgs().length > 0) {
-            Path base = Paths.get(cmd.getArgs()[0]);
-            if (Files.isSymbolicLink(base)) {
-                LOG.info("Resolve absolute path {} from link {}", base.toRealPath(), base);
-                base = base.toRealPath();
-            }
-            return base;
+        Path base;
+        if (cmd.hasOption("d")) {
+            base = Paths.get(cmd.getOptionValue("d"));
+        } else if (cmd.getArgs().length > 0) {
+            base = Paths.get(cmd.getArgs()[0]);
         } else {
             LOG.debug("Use current working directory to index");
-            return Paths.get(".");
+            base = Paths.get(".");
         }
+
+        if (Files.isSymbolicLink(base)) {
+            LOG.info("Resolve absolute path {} from link {}", base.toRealPath(), base);
+            base = base.toRealPath();
+        }
+        return base;
     }
 
     private void printChange(IndexChange changes) {
@@ -327,20 +484,75 @@ public class FileIndexCli {
     private static Options createOptions() {
         Options options = new Options();
 
-        options.addOption("h", false, "Print this help");
-        options.addOption("i", true, "Index file path to store. Default is ~/" + DEFAULT_INDEX_DIR + "/<dirname>.index");
-        options.addOption("I", true, "Index directory to store file indices. Default is ~/" + DEFAULT_INDEX_DIR);
-        options.addOption("q", false, "Quiet mode");
-        options.addOption("n", false, "Print changes only. Requires an existing file index");
+        options.addOption(Option.builder("h")
+                .longOpt("help")
+                .hasArg(false)
+                .desc("Print this help")
+                .build());
+        options.addOption(Option.builder("i")
+                .longOpt("index")
+                .hasArg(true)
+                .desc("Index file path to store. Default is ~/" + DEFAULT_INDEX_DIR + "/<dirname>.index")
+                .build());
+        options.addOption(Option.builder("I")
+                .longOpt("index-dir")
+                .hasArg(true)
+                .desc("Index directory to store file indices. Default is ~/" + DEFAULT_INDEX_DIR)
+                .build());
+        options.addOption(Option.builder("c")
+                .longOpt("create")
+                .hasArg(false)
+                .desc("Create file index from filesystem in not exist")
+                .build());
+        options.addOption(Option.builder("u")
+                .longOpt("update")
+                .hasArg(false)
+                .desc("Update file index from filesystem")
+                .build());
+        options.addOption(Option.builder("d")
+                .longOpt("dir")
+                .hasArg(true)
+                .desc("Root directory of file index")
+                .build());
+        options.addOption(Option.builder("q")
+                .longOpt("quiet")
+                .hasArg(false)
+                .desc("Quiet mode. Do not print output")
+                .build());
+        options.addOption(Option.builder("n")
+                .longOpt("dry-run")
+                .hasArg(false)
+                .desc("Do not perform any changes")
+                .build());
         options.addOption(Option.builder()
                 .longOpt("output-limit")
                 .hasArg(true)
                 .desc("Limit change output printing. Default is " + CHANGE_OUTPUT_LIMIT)
                 .build());
-        options.addOption(Option.builder("M")
-                .longOpt("verify-max-size")
+        options.addOption(Option.builder()
+                .longOpt("integrity-max-size")
                 .hasArg(true)
-                .desc("Limit content integrity verification by file size. Use 0 to disable")
+                .desc("Limit content integrity creation by file size. Use 0 to disable")
+                .build());
+        options.addOption(Option.builder()
+                .longOpt("integrity")
+                .hasArg(false)
+                .desc("Create content hashes")
+                .build());
+        options.addOption(Option.builder()
+                .longOpt("deduplicate")
+                .hasArg(false)
+                .desc("Deduplicate files via hard links based on the content hashes. If --other-dir is set the deduplication is performed from primary dir to the other dir")
+                .build());
+        options.addOption(Option.builder()
+                .longOpt("other-dir")
+                .hasArg(true)
+                .desc("Other root directory to create hard links between two indices")
+                .build());
+        options.addOption(Option.builder()
+                .longOpt("other-index")
+                .hasArg(true)
+                .desc("Other file index to create hard links between two indices")
                 .build());
         options.addOption(Option.builder()
                 .longOpt("start-delay")
