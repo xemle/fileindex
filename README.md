@@ -35,21 +35,21 @@ There are sooo many use cases for this file index cache...
 ## Usage
 
     $ mvn package
-    $ java -jar target/fileindex-*-cli.jar [path]
+    $ java -jar target/fileindex-*-cli.jar -c -u [path]
     
-The file index is read and written in the given path in the `.fileindex` file.
+The file index is created and updated from the current directory:
 
-    $ java -jar target/fileindex-1.0.0-SNAPSHOT-cli.jar 
-    M  .git/logs/refs/heads/master
-    C  .git/objects/17/b0bef62e9eedc172fd81ee818149a0a7206cef
-    C  .git/objects/bf/079448c9afd088f5fab951934da55de9ac3cbb
-    M  .git/refs/heads/master
-    M  .idea/workspace.xml
+    $ java -jar target/fileindex-1.0.0-SNAPSHOT-cli.jar -c -u
+    C  .git/logs/refs/heads/master
+    N  .git/objects/17/b0bef62e9eedc172fd81ee818149a0a7206cef
+    N  .git/objects/bf/079448c9afd088f5fab951934da55de9ac3cbb
+    C  .git/refs/heads/master
+    C  .idea/workspace.xml
     R  fileindex.log
-    M  src/main/java/de/silef/service/file/FileIndexCli.java
-    M  target/classes/de/silef/service/file/util/PathWalker.class
-    M  target/classes/simplelogger.properties
-    M  target/fileindex-1.0.0-SNAPSHOT-cli.jar
+    C  src/main/java/de/silef/service/file/FileIndexCli.java
+    C  target/classes/de/silef/service/file/util/PathWalker.class
+    M  target/classes/simpellogger.properties -> target/classes/simplelogger.properties
+    C  target/fileindex-1.0.0-SNAPSHOT-cli.jar
 
 Limit content integrity by `-M` option to save index creation time. Actually, it
 can be resumed - never mind :-)
@@ -60,19 +60,39 @@ files more than 10 MB are not calculated.
     $ java -jar target/fileindex-1.0.0-SNAPSHOT-cli.jar -M 10mb /home/me/Documents
 
 For help use `-h` option:
- 
-    usage: fileindex <options> [path]
 
     Following options are available:
-     -h                           Print this help
-     -i <arg>                     Index file to store. Default is
-                                  ~/.cache/fileindex/<dirname>.index
-     -M,--verify-max-size <arg>   Limit content integrity verification by file
-                                  size. Use 0 to disable
-     -n                           Print changes only. Requires an existing
-                                  file index
-        --output-limit <arg>      Limit change output printing. Default is 256
-     -q                           Quiet mode
+     -c,--create                     Create file index from filesystem in not
+                                     exist
+     -d,--dir <arg>                  Root directory of file index
+        --deduplicate                Deduplicate files via hard links based on
+                                     the content hashes. If --other-dir is set
+                                     the deduplication is performed from
+                                     primary dir to the other dir. Requires
+                                     indices with --integrity option
+        --diff                       Show difference between another index via
+                                     --other-dir or --other-index
+        --diff-full                  Same as --diff but shows also files of
+                                     created or removed directories
+     -h,--help                       Print this help
+     -i,--index <arg>                Index file path to store. Default is
+                                     ~/.cache/fileindex/<dirname>.index
+     -I,--index-dir <arg>            Index directory to store file indices.
+                                     Default is ~/.cache/fileindex
+        --integrity                  Create content hashes
+        --integrity-max-size <arg>   Limit content integrity creation by file
+                                     size. Use 0 to disable
+     -n,--dry-run                    Do not perform any changes
+        --other-dir <arg>            Other root directory to create hard links
+                                     between two indices
+        --other-index <arg>          Other file index to create hard links
+                                     between two indices
+        --output-limit <arg>         Limit change output printing. Default is
+                                     256
+     -q,--quiet                      Quiet mode. Do not print output
+        --start-delay <arg>          Delays the execution by given seconds.
+                                     Useful for profiling
+     -u,--update                     Update file index from filesystem
     
     Please consult fileindex.log for detailed program information
 

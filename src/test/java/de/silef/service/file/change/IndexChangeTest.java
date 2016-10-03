@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.List;
@@ -183,15 +184,6 @@ public class IndexChangeTest extends BasePathTest {
         verifyExtensions(oldFooTxt, updateFooTxt.getExtensions());
     }
 
-    private void verifyExtensions(IndexNode node, List<IndexExtension> extensions) {
-        for (IndexExtension extension : extensions) {
-            IndexExtension nodeExtension = node.getExtensionByType(extension.getType());
-            assertThat(nodeExtension, is(not(nullValue())));
-            assertThat(nodeExtension.getData(), is(extension.getData()));
-        }
-        assertThat(node.getExtensions().size(), is(extensions.size()));
-    }
-
     @Test
     public void applyRemoved() throws IOException {
         Files.write(tmp.resolve("foo.txt"), "content".getBytes());
@@ -206,6 +198,93 @@ public class IndexChangeTest extends BasePathTest {
 
 
         assertThat(update.getRoot().getChildByName("foo.txt"), is(nullValue()));
+    }
+
+    @Test
+    public void expandChanges() throws IOException {
+        Files.createDirectories(tmp.resolve("bar"));
+        Files.write(tmp.resolve("bar/foo.txt"), "content".getBytes());
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
+
+        Files.move(tmp.resolve("bar"), tmp.resolve("bar2"));
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
+
+        IndexChange changes = old.getChanges(update, indexStrategy);
+
+
+        changes.expandChanges();
+
+
+        assertThat(changes.getCreated().size(), is(2));
+        assertThat(changes.getRemoved().size(), is(2));
+    }
+
+    @Test
+    public void detectMoves() throws IOException {
+        Files.write(tmp.resolve("foo.txt"), "content".getBytes());
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
+        hashContent(old);
+
+        Files.move(tmp.resolve("foo.txt"), tmp.resolve("bar.txt"));
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
+        hashContent(update);
+
+        IndexChange changes = old.getChanges(update, indexStrategy);
+
+
+        changes.detectMoves();
+
+
+        assertThat(changes.getCreated().size(), is(0));
+        assertThat(changes.getMoved().size(), is(1));
+        assertThat(changes.getRemoved().size(), is(0));
+    }
+
+    @Test
+    public void detectMovesWithBestMatch() throws IOException {
+        Files.write(tmp.resolve("foo.txt"), "content".getBytes());
+        FileIndex old = FileIndex.create(tmp, indexStrategy);
+        hashContent(old);
+
+        Files.createDirectories(tmp.resolve("foo"));
+        Files.write(tmp.resolve("foo/bar.txt"), "content".getBytes());
+        Files.move(tmp.resolve("foo.txt"), tmp.resolve("bar.txt"));
+        FileIndex update = FileIndex.create(tmp, indexStrategy);
+        hashContent(update);
+
+        IndexChange changes = old.getChanges(update, indexStrategy);
+        changes.expandChanges();
+
+        changes.detectMoves();
+
+
+        assertThat(changes.getCreated().size(), is(2));
+        assertThat(changes.getMoved().size(), is(1));
+        assertThat(changes.getMoved().get(0).getUpdate().getRelativePath().toString(), is("bar.txt"));
+        assertThat(changes.getRemoved().size(), is(0));
+    }
+
+    private void hashContent(FileIndex index) {
+        index.getRoot()
+                .stream()
+                .filter(IndexNode::isFile)
+                .forEach(n -> {
+                    Path file = index.getBase().resolve(n.getRelativePath());
+                    try {
+                        n.addExtension(FileContentHashIndexExtension.create(file));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+    }
+
+    private void verifyExtensions(IndexNode node, List<IndexExtension> extensions) {
+        for (IndexExtension extension : extensions) {
+            IndexExtension nodeExtension = node.getExtensionByType(extension.getType());
+            assertThat(nodeExtension, is(not(nullValue())));
+            assertThat(nodeExtension.getData(), is(extension.getData()));
+        }
+        assertThat(node.getExtensions().size(), is(extensions.size()));
     }
 
 }

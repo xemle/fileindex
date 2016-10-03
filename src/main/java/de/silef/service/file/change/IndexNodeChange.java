@@ -9,7 +9,7 @@ import java.nio.file.Path;
  */
 public class IndexNodeChange {
 
-    public enum Change { SAME, CREATED, MODIFIED, REMOVED}
+    public enum Change { SAME, CREATED, MODIFIED, MOVED, REMOVED}
 
     private Change change;
 
@@ -56,6 +56,8 @@ public class IndexNodeChange {
             return "+ " + update.getRelativePath();
         } else if (change.equals(Change.MODIFIED)) {
             return "! " + origin.getRelativePath();
+        } else if (change.equals(Change.MOVED)) {
+            return "> " + origin.getRelativePath() + " -> " + update.getRelativePath();
         } else {
             return "- " + origin.getRelativePath();
         }

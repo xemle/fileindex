@@ -40,6 +40,7 @@ public class FileIndexCli {
     private static final Logger LOG = LoggerFactory.getLogger(FileIndexCli.class);
 
     private static final String DEFAULT_INDEX_DIR = ".cache/fileindex";
+    private static final String DEFAULT_INDEX_EXT = ".index";
     private static final int CHANGE_OUTPUT_LIMIT = 256;
 
     private CommandLine cmd;
@@ -84,7 +85,7 @@ public class FileIndexCli {
         if (cmd.hasOption("other-index")) {
             otherIndexFile = Paths.get(cmd.getOptionValue("other-index"));
         } else if (cmd.hasOption("I")) {
-            String indexFile = otherBase.getFileName() + ".index";
+            String indexFile = otherBase.getFileName() + DEFAULT_INDEX_EXT;
             otherIndexFile = Paths.get(cmd.getOptionValue("I")).resolve(indexFile);
         } else {
             System.err.println("Missing option --other-index for option --diff");
@@ -107,8 +108,9 @@ public class FileIndexCli {
         });
 
         if (cmd.hasOption("diff-full")) {
-            change = new IndexChange(change.getBase(), change.getExpandedChanges());
+            change.expandChanges();
         }
+        change.detectMoves();
         printChange(change);
     }
 
@@ -195,7 +197,7 @@ public class FileIndexCli {
         if (cmd.hasOption("other-index")) {
             otherIndexFile = Paths.get(cmd.getOptionValue("other-index"));
         } else if (cmd.hasOption("I")) {
-            String indexName = otherBase.getFileName() + ".index";
+            String indexName = otherBase.getFileName() + DEFAULT_INDEX_EXT;
             otherIndexFile = Paths.get(cmd.getOptionValue("I")).resolve(indexName);
         } else {
             System.err.println("Missing option --other-index or -I");
@@ -449,7 +451,7 @@ public class FileIndexCli {
         if (cmd.hasOption("i")) {
             indexFile = Paths.get(cmd.getOptionValue("i"));
         } else {
-            String indexName = base.toRealPath().getFileName() + ".index";
+            String indexName = base.toRealPath().getFileName() + DEFAULT_INDEX_EXT;
             indexFile = indexDir.resolve(indexName);
             LOG.debug("Use default index file: {}", indexFile);
         }
@@ -482,21 +484,23 @@ public class FileIndexCli {
         }
 
         if (changes.getChanges().size() > getChangeOutputLimit()) {
-            System.out.println("Too many changes: " + changes.getChanges().size() + " modifications. Skip printing. Change it by --output-limit option");
+            System.out.println("Too many changes: " + changes.getChanges().size() + ". Skip printing. Change it by --output-limit option");
             return;
         }
 
         changes.getChanges()
                 .stream()
                 .sorted((a, b) -> a.getRelativePath().compareTo(b.getRelativePath()))
-                .map(c -> getChangeIcon(c) + "  " + c.getRelativePath())
+                .map(c -> getChangeIcon(c) + "  " + c.getRelativePath() + (c.getChange() == IndexNodeChange.Change.MOVED ? " -> " + c.getUpdate().getRelativePath() : ""))
                 .forEach(System.out::println);
     }
 
     private String getChangeIcon(IndexNodeChange change) {
         if (change.getChange() == IndexNodeChange.Change.CREATED) {
-            return "C" + (change.getUpdate().isDirectory() ? "D" : " ");
+            return "N" + (change.getUpdate().isDirectory() ? "D" : " ");
         } else if (change.getChange() == IndexNodeChange.Change.MODIFIED) {
+            return "C" + (change.getUpdate().isDirectory() ? "D" : " ");
+        } else if (change.getChange() == IndexNodeChange.Change.MOVED) {
             return "M" + (change.getUpdate().isDirectory() ? "D" : " ");
         } else {
             return "R" + (change.getOrigin().isDirectory() ? "D" : " ");
@@ -595,7 +599,7 @@ public class FileIndexCli {
         options.addOption(Option.builder()
                 .longOpt("deduplicate")
                 .hasArg(false)
-                .desc("Deduplicate files via hard links based on the content hashes. If --other-dir is set the deduplication is performed from primary dir to the other dir")
+                .desc("Deduplicate files via hard links based on the content hashes. If --other-dir is set the deduplication is performed from primary dir to the other dir. Requires indices with --integrity option")
                 .build());
         options.addOption(Option.builder()
                 .longOpt("other-dir")
