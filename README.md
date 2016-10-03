@@ -57,7 +57,7 @@ can be resumed - never mind :-)
 Following command will index the `/home/me/Documents` folder. Content hashes of 
 files more than 10 MB are not calculated. 
 
-    $ java -jar target/fileindex-1.0.0-SNAPSHOT-cli.jar -M 10mb /home/me/Documents
+    $ java -jar target/fileindex-1.0.0-SNAPSHOT-cli.jar -M 10mb -c -u /home/me/Documents
 
 For help use `-h` option:
 
@@ -103,6 +103,10 @@ File Index Cache runs with Java 8 and is build with Maven
 ## File Format
 
 See [file-index.md](src/doc/file-index.md) in `src/doc` for details.
+
+## Design Issues
+
+See [design-issues.md](src/doc/design-issues.md) in `src/doc` for details.
 
 ## Licence
 
